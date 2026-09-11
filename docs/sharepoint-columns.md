@@ -14,6 +14,8 @@ One item per submitted survey.
 | Internal name | Type | Notes |
 |---|---|---|
 | `Title` | Single line | Survey ID, e.g. `SS-20260911-PRO2220581-001`. Use as the unique key. |
+| `Revision` | Number | 1 on first submission, 2 on the first edit, and so on |
+| `LastEditedAt` | Date and time | Empty until the survey is edited |
 | `SurveyDate` | Date only | |
 | `StartedAt` | Date and time | When the engineer picked the site |
 | `SubmittedAt` | Date and time | |

@@ -13,6 +13,9 @@ Files in this folder:
 | `sharepoint-columns.md` | Every list and column to create |
 | `sample-payload.json` | One real submission, for testing the flow |
 
+Two flows are described below: one to receive a survey (§3), one to read them
+all back for supervisors (§3b).
+
 ---
 
 ## 1. Put the app on GitHub Pages
@@ -86,6 +89,68 @@ New → **Instant cloud flow** → trigger **When an HTTP request is received**.
 
 Save the flow, then copy the **HTTP POST URL** from the trigger.
 
+### Handling edits
+
+An engineer can correct a survey after submitting it (*My surveys → Edit survey*).
+The corrected copy keeps the **same Survey ID** and arrives with `revision` 2, 3
+and so on, plus `lastEditedAt`. So the flow must update rather than insert:
+
+1. **Get items** on `SiteSurveys`, filter `Title eq '@{body('Parse survey')?['surveyId']}'`, top 1.
+   Name it `Find existing survey`.
+2. **Condition** — `length(body('Find_existing_survey')?['value'])` is greater than `0`.
+   - **If yes** → *Update item*, Id = `first(body('Find_existing_survey')?['value'])?['ID']`,
+     same field mapping as *Create item*.
+   - **If no** → *Create item*.
+3. Before writing the equipment rows, **Get items** on `SiteSurveyLoadLines` filtered
+   `SurveyId eq '<surveyId>'` and delete them, so a revision replaces the old rows
+   instead of adding a second set.
+
+`flow-definition.json` already has this shape — `Find_existing_survey`,
+`Create_or_update_survey` and `Delete_old_load_lines`.
+
+This also removes the duplicate risk from a retried post: a survey that already
+reached SharePoint is updated in place, not written twice.
+
+### Photographs on a revision
+
+*Create file* overwrites a file of the same name, so re-posting a revision
+refreshes the folder rather than duplicating it. A photograph the engineer
+**deleted** during the edit stays in the library — add a *Delete file* loop over
+the folder first if that matters to you.
+
+---
+
+## 3b. Second flow: letting supervisors read everything back
+
+Field engineers only ever need what is on their own phone. Admin, branch and
+regional sign-ins get an extra button, **Load all surveys from SharePoint**, and
+that needs a second flow.
+
+New → **Instant cloud flow** → **When an HTTP request is received**, method `GET`.
+
+1. **Get items** → list `SiteSurveys`. Order by `Created desc`, top 500.
+   Optional filter using the query string the app sends
+   (`?role=admin&branch=MH_Mumbai&zone=West`):
+   `@{if(equals(triggerOutputs()['queries']['role'],'branch'), concat('EngineerBranch eq ''', triggerOutputs()['queries']['branch'], ''''), '')}`
+2. **Select** → map each row to `{ "RawPayload": item()?['RawPayload'] }`.
+   `RawPayload` holds the whole survey, so the app can rebuild the full report
+   from it — including the comparison table and the issue list.
+3. **Response** — status 200, body `@body('Select')`, and add the header
+   `Access-Control-Allow-Origin: *`. Without that header the browser will not
+   let the page read the reply.
+
+Paste that flow's URL into `listUrl` in `data/app-config.js`. Leave it empty and
+the tab simply shows what is on the device.
+
+**A GET with no custom headers is a "simple" request**, so there is no preflight
+to worry about — the same reason the POST uses `text/plain`.
+
+Photographs are not returned by this flow (`RawPayload` carries their captions
+and timestamps, not the images). A supervisor opening someone else's survey sees
+the full report with a note where the photographs would be. If you want the
+images too, add a *Get file content* loop over `SiteSurveyPhotos/<surveyId>` and
+return them as data URLs — it is much slower, so only do it on demand.
+
 ### Faster alternative
 
 Steps 4 and 5 run one SharePoint call per photo and per equipment row — roughly
@@ -151,10 +216,13 @@ curl -X POST "<HTTP POST URL>" -H "Content-Type: text/plain" --data-binary @samp
 3. **Payload size.** A survey with three photographs is roughly 400 KB of JSON.
    Well inside the trigger's limit, but slow on a weak signal — the queue exists
    for exactly this.
-4. **Duplicate submissions.** If a post times out but the flow actually
-   succeeded, a retry writes the item twice. Add a *Get items* on
-   `Title eq surveyId` before *Create item* and skip when found. The Survey ID
-   is unique per site per day per sequence, so it is a safe key.
+4. **Duplicate submissions are already handled** by the *Find existing survey*
+   step in §3. Keep it: it is what makes both retries and edits safe.
+5. **Who may edit.** Any engineer can currently re-open and correct their own
+   submitted survey, and every revision is kept in SharePoint through `Revision`
+   and `LastEditedAt`. If you need edits to stop after sign-off, add a
+   `Locked` yes/no column, return it in the list flow, and have the app hide the
+   *Edit survey* button when it is set.
 
 ---
 

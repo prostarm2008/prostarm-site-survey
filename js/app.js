@@ -21,6 +21,7 @@ const CONFIG = {
      not answer. The flow parses the body with json(triggerBody()).
      --------------------------------------------------------------- */
   flowUrl: (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.flowUrl) || '',
+  listUrl: (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.listUrl) || '',
   flowContentType: (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.flowContentType) || 'text/plain;charset=UTF-8',
   flowTimeoutMs: 45000,
   photoMaxPx: 1400,
@@ -121,6 +122,7 @@ function applyLang() {
   buildStateFilter();
   buildStepper();
   buildLoadTable();      // the phone layout puts its labels in data attributes
+  paintEditBanner();
   if (appView === 'mine') renderMine();
   paintScope();
   paintGps();
@@ -146,6 +148,7 @@ function blankLoadRows() {
 const state = {
   draftId: null, surveyId: '', submitted: false, submittedAt: null, startedAt: null,
   step: 'site', user: null, site: null, gps: null,
+  editingId: null, revision: 1,
   loadNA: false,
   loadRows: blankLoadRows(),
   fields: {},
@@ -503,6 +506,70 @@ function applyLoadNA() {
   $('#loadNAnote').style.display = na ? 'block' : 'none';
 }
 
+/* What "clear this page" empties, per step. Radio group names, input ids,
+   photo buckets and the two specials (site selection, load table). */
+const CLEARABLE = {
+  site:   { radios:['siteCondition'], inputs:['branchFloorOther'], photos:['sitecondition'], site:true, gps:true },
+  safety: { radios:['branchFloor','liftAvailable','stairAvailable','stairFeasible','craneUnloading',
+                    'craneLoading','ventilation','acAvailable','waterLeakage','fireExtinguisher'],
+            inputs:['branchFloorOther','mainDoorH','mainDoorW','upsRoomL','upsRoomB','upsRoomH',
+                    'upsDoorH','upsDoorW','liftDoorH','liftDoorW'],
+            photos:['safety'] },
+  power:  { radios:['earthAvailable'], inputs:['voltR','voltY','voltB','load1','load2','load3','earthVoltage'] },
+  wire:   { radios:['inCableAvail','outCableAvail','earthCableAvail','inMccbAvail','outMccbAvail',
+                    'inMccbType','outMccbType'],
+            inputs:['inCableSize','outCableSize','earthCableSize','inMccbRating','outMccbRating'],
+            photos:['wire'] },
+  load:   { load:true },
+  review: { inputs:['remarkEngineer','remarkCustomer'] }
+};
+
+function clearSection(stepId) {
+  const c = CLEARABLE[stepId];
+  if (!c) return;
+
+  (c.radios || []).forEach(g => {
+    $$('input[name="' + g + '"]').forEach(r => { r.checked = false; });
+    state.fields[g] = '';
+  });
+  (c.inputs || []).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = ''; el.classList.remove('invalid'); }
+    state.fields[id] = '';
+  });
+  (c.photos || []).forEach(k => { state.photos[k] = []; renderPhotos(k); });
+
+  if (c.site) { state.site = null; $('#siteSearch').value = ''; $('#siteBlock').style.display = 'none'; }
+  if (c.gps)  { state.gps = null; paintGps(); }
+  if (c.load) {
+    state.loadNA = false;
+    state.loadRows = blankLoadRows();
+    applyLoadNA();
+    buildLoadTable();
+  }
+
+  $$('#sec-' + stepId + ' .err').forEach(e => e.classList.remove('show'));
+  applyConditionals();
+  calcLoad();
+  refresh();
+  toast(t('This page has been cleared.'));
+}
+
+function buildClearButtons() {
+  $$('.sec').forEach(sec => {
+    const id = sec.dataset.sec;
+    if (!CLEARABLE[id] || $('.clearcard', sec)) return;
+    const card = document.createElement('div');
+    card.className = 'card clearcard';
+    card.innerHTML = '<div class="cbody clearrow">' +
+      '<span class="hint" style="margin:0" data-i18n="Wrong site or wrong readings? Empty this page and start it again.">' +
+        'Wrong site or wrong readings? Empty this page and start it again.</span>' +
+      '<button type="button" class="clearbtn" data-clear="' + id + '" data-i18n="Clear this page">Clear this page</button>' +
+      '</div>';
+    sec.appendChild(card);
+  });
+}
+
 /* ============================================================
    5. Field plumbing
    ============================================================ */
@@ -857,7 +924,7 @@ function buildSurveyId(commit) {
 }
 
 function paintHeader() {
-  if (!state.submitted) state.surveyId = buildSurveyId(false);
+  if (!state.submitted && !state.editingId) state.surveyId = buildSurveyId(false);
   $('#hdrSurveyId').textContent = state.surveyId || 'Survey ID pending';
   const p = $('#hdrStatus');
   p.textContent = t(state.submitted ? 'Submitted' : 'Draft');
@@ -943,8 +1010,10 @@ function applyDraft(d) {
 }
 
 function resetAll() {
+  $$('#minePanel .pbtn').forEach(b => b.disabled = false);
   state.draftId = null; state.surveyId = ''; state.submitted = false; state.submittedAt = null;
   state.site = null; state.gps = null; state.fields = {}; state.loadNA = false;
+  state.editingId = null; state.revision = 1;
   state.startedAt = new Date().toISOString();
   state.loadRows = blankLoadRows();
   Object.keys(state.photos).forEach(k => state.photos[k] = []);
@@ -955,7 +1024,8 @@ function resetAll() {
   });
   $$('.err').forEach(e => e.classList.remove('show'));
   // submitting locks the controls; a new survey has to unlock them again
-  $$('.pbtn').forEach(b => b.disabled = false);
+  $$('#surveyPanel .pbtn').forEach(b => b.disabled = false);
+  $$('.clearbtn').forEach(b => b.disabled = false);
   ['#btnGps','#btnSubmit','#btnSaveDraft','#btnNext','#btnPrev'].forEach(sel => {
     const el = $(sel); if (el) el.disabled = false;
   });
@@ -1018,9 +1088,11 @@ function surveyJSON() {
 
   return {
     surveyId: state.surveyId,
+    revision: state.revision || 1,
     surveyDate: f.surveyDate || '',
     startedAt: state.startedAt,
     submittedAt: state.submittedAt,
+    lastEditedAt: (state.revision || 1) > 1 ? new Date().toISOString() : null,
     engineerName: f.engineerName || '',
     engineerId: f.engineerId || '',
     submittedBy: u ? { userId:u.userId, name:u.name, role:u.role, designation:u.designation,
@@ -1130,7 +1202,8 @@ async function submitSurveyToServer(payload) {
   });
 
   const all = storedSurveys();
-  all.push(rec);
+  const existing = all.findIndex(r => r.surveyId === payload.surveyId);
+  if (existing === -1) all.push(rec); else all[existing] = rec;   // an edit replaces, never duplicates
   if (!tryStore(all)) {
     // Device storage is finite. Give up the oldest photographs first so the most
     // recent surveys keep their images, and never lose the survey data itself.
@@ -1207,13 +1280,15 @@ function openConfirm() {
   $('#confirmModal').classList.add('show');
 }
 
+let pendingClear = null;
 let submitting = false;
 async function doSubmit() {
   if (submitting || state.submitted) return;
   submitting = true;
   $('#btnConfirmSubmit').disabled = true;
   try {
-    state.surveyId = buildSurveyId(true);
+    // An edit keeps its Survey ID so SharePoint updates the same item.
+    if (!state.editingId) { state.surveyId = buildSurveyId(true); state.revision = 1; }
     state.submitted = true;
     state.submittedAt = new Date().toISOString();
     const res = await submitSurveyToServer(surveyJSON());
@@ -1222,8 +1297,11 @@ async function doSubmit() {
     lockSubmitted();
     refresh();
     $('#submittedCard').scrollIntoView({ behavior:'smooth', block:'center' });
+    const wasEdit = !!state.editingId;
+    state.editingId = null;
+    paintEditBanner();
     toast(res && res.queued ? t('Survey saved. It will be sent when a connection is available.')
-                            : t('Survey submitted.'));
+                            : t(wasEdit ? 'Revision submitted.' : 'Survey submitted.'));
   } catch (e) {
     state.submitted = false;
     toast(t('Submission failed. The draft is still on this device.'));
@@ -1234,8 +1312,10 @@ async function doSubmit() {
 }
 
 function lockSubmitted() {
-  $$('#app input, #app select, #app textarea').forEach(el => { if (el.type !== 'file') el.disabled = true; });
-  $$('.pbtn').forEach(b => b.disabled = true);
+  $$('#surveyPanel input, #surveyPanel select, #surveyPanel textarea')
+    .forEach(el => { if (el.type !== 'file') el.disabled = true; });
+  $$('#surveyPanel .pbtn').forEach(b => b.disabled = true);
+  $$('.clearbtn').forEach(b => b.disabled = true);
   $('#btnGps').disabled = true;
   $('#btnSubmit').disabled = true;
   $('#btnSaveDraft').disabled = true;
@@ -1623,10 +1703,102 @@ function storedSurveys() {
 }
 
 function exportAll() {
-  const all = storedSurveys();
+  const all = mySurveys();
   if (!all.length) { toast(t('No submitted surveys on this device yet.')); return; }
   download('site-surveys-' + todayISO().replace(/-/g,'') + '.csv', toCSV(all.map(flattenSurvey)), 'text/csv');
   toast(all.length + ' surveys exported.');
+}
+
+/* Turn a stored submission back into the draft shape the form understands,
+   so a submitted survey can be corrected and sent again as a new revision. */
+function recordToDraft(rec) {
+  const ss = rec.spaceSafety || {}, pi = rec.powerInput || {}, wm = rec.wireMccb || {};
+  const f = {
+    engineerName: rec.engineerName || '', engineerId: rec.engineerId || '',
+    surveyDate: rec.surveyDate || todayISO(),
+    siteCondition: (rec.site || {}).siteCondition || '',
+    branchFloor: ss.branchFloor || '', branchFloorOther: ss.branchFloorOther || '',
+    mainDoorH: (ss.mainDoor || {}).height || '', mainDoorW: (ss.mainDoor || {}).width || '',
+    mainDoorUnit: (ss.mainDoor || {}).unit || 'Feet',
+    upsRoomL: (ss.upsRoom || {}).length || '', upsRoomB: (ss.upsRoom || {}).breadth || '',
+    upsRoomH: (ss.upsRoom || {}).height || '', upsRoomUnit: (ss.upsRoom || {}).unit || 'Feet',
+    upsDoorH: (ss.upsRoomDoor || {}).height || '', upsDoorW: (ss.upsRoomDoor || {}).width || '',
+    upsDoorUnit: (ss.upsRoomDoor || {}).unit || 'Feet',
+    liftAvailable: ss.liftAvailable || '',
+    liftDoorH: (ss.liftDoor || {}).height || '', liftDoorW: (ss.liftDoor || {}).width || '',
+    liftDoorUnit: (ss.liftDoor || {}).unit || 'Feet',
+    stairAvailable: ss.stairAvailable || '', stairFeasible: ss.stairFeasible || '',
+    craneUnloading: ss.craneForUnloading || '', craneLoading: ss.craneForLoadingAtCentre || '',
+    ventilation: ss.ventilation || '', acAvailable: ss.acAvailability || '',
+    waterLeakage: ss.waterLeakage || '', fireExtinguisher: ss.fireExtinguisher || '',
+    voltR: (pi.ebVoltage || {}).r || '', voltY: (pi.ebVoltage || {}).y || '', voltB: (pi.ebVoltage || {}).b || '',
+    load1: (pi.phaseLoadAmp || {}).phase1 || '', load2: (pi.phaseLoadAmp || {}).phase2 || '',
+    load3: (pi.phaseLoadAmp || {}).phase3 || '',
+    earthAvailable: pi.earthingAvailable || '',
+    earthVoltage: (pi.earthingVoltage === 'Not Applicable') ? '' : (pi.earthingVoltage || ''),
+    inCableAvail: (wm.inputCable || {}).availability || '', inCableSize: (wm.inputCable || {}).sizeSqmm || '',
+    outCableAvail: (wm.outputCable || {}).availability || '', outCableSize: (wm.outputCable || {}).sizeSqmm || '',
+    earthCableAvail: (wm.earthingCable || {}).availability || '', earthCableSize: (wm.earthingCable || {}).sizeSqmm || '',
+    inMccbAvail: (wm.inputMccb || {}).availability || '', inMccbRating: (wm.inputMccb || {}).ratingAmp || '',
+    inMccbType: (wm.inputMccb || {}).type || '',
+    outMccbAvail: (wm.outputMccb || {}).availability || '', outMccbRating: (wm.outputMccb || {}).ratingAmp || '',
+    outMccbType: (wm.outputMccb || {}).type || '',
+    remarkEngineer: (rec.remarks || {}).engineer || '', remarkCustomer: (rec.remarks || {}).customer || ''
+  };
+
+  const rows = blankLoadRows();
+  (rec.loadCalculation || []).forEach(r => {
+    const row = rows.find(x => x.i === r.i && x.type === 'item');
+    if (!row) return;
+    row.count    = r.count == null ? '' : String(r.count);
+    row.watts    = r.watts == null ? '' : String(r.watts);
+    row.upsCount = r.countOnUps == null ? '' : String(r.countOnUps);
+  });
+
+  const photos = { sitecondition:[], safety:[], wire:[] };
+  (rec.photos || []).forEach(p => {
+    if (!p.dataUrl || !photos[p.section]) return;
+    photos[p.section].push({ id:p.id, dataUrl:p.dataUrl, ts:p.timestamp, caption:p.caption || '' });
+  });
+
+  return {
+    draftId: null, surveyId: rec.surveyId, submitted: false, submittedAt: null,
+    startedAt: rec.startedAt || null, step: 'site',
+    siteCode: (rec.site || {}).siteCode || null,
+    userId: (rec.submittedBy || {}).userId || null,
+    gps: rec.gps || null, loadNA: !rec.loadDetailsAvailable,
+    loadRows: rows, fields: f, photos: photos
+  };
+}
+
+function editSurvey(rec) {
+  showView('survey');
+  resetAll();
+  state.editingId = rec.surveyId;
+  state.revision = (rec.revision || 1) + 1;
+  applyDraft(recordToDraft(rec));
+  state.surveyId = rec.surveyId;
+  paintEditBanner();
+  refresh();
+  toast(t('Editing') + ' ' + rec.surveyId + ' · ' + t('revision') + ' ' + state.revision);
+}
+
+function paintEditBanner() {
+  const bar = $('#editBar');
+  if (!bar) return;
+  bar.style.display = state.editingId ? '' : 'none';
+  if (state.editingId)
+    $('#editBarText').textContent = t('Editing a submitted survey') + ' — ' + state.editingId +
+      ' · ' + t('revision') + ' ' + state.revision;
+}
+
+function cancelEdit() {
+  state.editingId = null;
+  state.revision = 1;
+  resetAll();
+  paintEditBanner();
+  refresh();
+  toast(t('Edit cancelled. Nothing was changed.'));
 }
 
 /* ============================================================
@@ -1634,10 +1806,48 @@ function exportAll() {
    ============================================================ */
 let appView = 'survey';
 
+let remoteSurveys = [];          // pulled from SharePoint, read-only
+const isEngineer = () => !state.user || state.user.role === 'engineer';
+
 function mySurveys() {
   const all = storedSurveys();
-  if (!state.user || state.user.role !== 'engineer') return all.slice().reverse();
-  return all.filter(r => r.submittedBy && r.submittedBy.userId === state.user.userId).reverse();
+  const local = isEngineer()
+    ? all.filter(r => r.submittedBy && r.submittedBy.userId === state.user.userId)
+    : all;
+  // A survey already held on this device wins over the SharePoint copy of itself.
+  const here = {};
+  local.forEach(r => { here[r.surveyId] = true; });
+  return local.concat(remoteSurveys.filter(r => !here[r.surveyId])).reverse();
+}
+
+/* Reads every survey back from SharePoint through the list flow. Supervisors only:
+   a field engineer has their own work on their own phone already. */
+async function fetchAllSurveys() {
+  if (!CONFIG.listUrl) { toast(t('No SharePoint list flow is configured on this build.')); return; }
+  const btn = $('#btnFetchAll');
+  if (btn) { btn.disabled = true; btn.textContent = t('Loading from SharePoint…'); }
+  try {
+    const sep = CONFIG.listUrl.indexOf('?') === -1 ? '?' : '&';
+    const url = CONFIG.listUrl + sep + 'role=' + encodeURIComponent(state.user.role) +
+                '&branch=' + encodeURIComponent(state.user.branch || '') +
+                '&zone=' + encodeURIComponent(state.user.zone || '');
+    const res = await fetch(url, { method:'GET' });
+    if (!res.ok) throw new Error('flow returned ' + res.status);
+    const data = await res.json();
+    const rows = Array.isArray(data) ? data : (data.value || data.surveys || []);
+    remoteSurveys = rows.map(r => {
+      // The flow may return the stored item or just the RawPayload string.
+      const payload = typeof r === 'string' ? JSON.parse(r)
+                    : (r.RawPayload ? JSON.parse(r.RawPayload) : r);
+      return Object.assign({}, payload, { syncStatus:'synced', fromSharePoint:true });
+    }).filter(r => r && r.surveyId);
+    renderMine();
+    toast(remoteSurveys.length + ' ' + t('surveys loaded from SharePoint.'));
+  } catch (e) {
+    toast(t('Could not reach SharePoint.') + ' ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = t('Load all surveys from SharePoint'); }
+  }
 }
 
 function showView(v) {
@@ -1655,6 +1865,12 @@ function renderMine() {
   const list = mySurveys();
   $('#mineCount').textContent = list.length;
   $('#mineBig').textContent = list.length;
+  $('#mineTitle').textContent = t(isEngineer() ? 'Surveys completed' : 'All surveys');
+  $('#mineScopeLine').textContent = t(isEngineer()
+    ? 'submitted from this device'
+    : 'from every engineer, on this device and from SharePoint');
+  const fetchBtn = $('#btnFetchAll');
+  fetchBtn.style.display = (!isEngineer() && CONFIG.listUrl) ? '' : 'none';
   $('#btnMineExportAll').style.display = list.length ? '' : 'none';
 
   const pending = pendingSurveys().length;
@@ -1687,6 +1903,9 @@ function renderMine() {
         '<span class="when">' + esc(fmtDate(r.surveyDate)) +
           '<br><span class="tag ' + sync[0] + '">' + esc(t(sync[1])) + '</span></span></div>' +
       '<div class="facts">' +
+        (isEngineer() ? '' :
+          '<div><span>' + esc(t('Field engineer')) + '</span><b>' +
+          esc((r.submittedBy || {}).name || r.engineerName || '—') + '</b></div>') +
         '<div><span>' + esc(t('UPS capacity')) + '</span><b>' + esc(s.upsCapacity || '—') + '</b></div>' +
         '<div><span>' + esc(t('Total load on UPS')) + '</span><b>' + esc(load) + '</b></div>' +
         '<div><span>' + esc(t('Issues')) + '</span><b>' + issues + '</b></div>' +
@@ -1699,7 +1918,12 @@ function renderMine() {
           esc(t('Load Calculation Report')) + '</button>' +
         '<button type="button" data-survey="' + esc(r.surveyId) + '" data-act="csv">' +
           esc(t('Export CSV')) + '</button>' +
+        (r.fromSharePoint ? '' :
+          '<button type="button" data-survey="' + esc(r.surveyId) + '" data-act="edit">' +
+          esc(t('Edit survey')) + '</button>') +
       '</div>' +
+      ((r.revision || 1) > 1 ? '<div class="note">' + esc(t('revision') + ' ' + r.revision) + '</div>' : '') +
+      (r.fromSharePoint ? '<div class="note">' + esc(t('From SharePoint — open or export only.')) + '</div>' : '') +
       (r.photosDropped ? '<div class="note">' + esc(t('Photographs were not kept on this device for this survey.')) + '</div>' : '') +
       (r.syncError ? '<div class="note">' + esc(r.syncError) + '</div>' : '') +
     '</div>';
@@ -1766,6 +1990,7 @@ function enterApp(user) {
     (user.designation ? ' · ' + user.designation : '') + (user.branch ? ' · ' + user.branch : '');
   $('#userChipWrap').style.display = '';
   $('#btnExportAll').style.display = (user.role === 'engineer') ? 'none' : '';
+  $$('.pbtn, .clearbtn').forEach(b => b.disabled = false);
   siteScope = 'branch';
   stateFilterValue = '';
   buildStateFilter();
@@ -1861,6 +2086,20 @@ function wireButtons() {
   ['#btnNewSurvey','#btnNewSurvey2'].forEach(sel =>
     on(sel,'click', () => { hideReport(); resetAll(); refresh(); toast(t('New survey started.')); }));
 
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-clear]');
+    if (!b || b.disabled) return;
+    pendingClear = b.dataset.clear;
+    $('#clearWhat').textContent = t(SECTION_TITLE[pendingClear] || pendingClear);
+    $('#clearModal').classList.add('show');
+  });
+  on('#btnClearCancel','click', () => $('#clearModal').classList.remove('show'));
+  on('#btnClearConfirm','click', () => {
+    $('#clearModal').classList.remove('show');
+    if (pendingClear) clearSection(pendingClear);
+    pendingClear = null;
+  });
+
   $('#stepper').addEventListener('click', e => {
     const b = e.target.closest('[data-goto]');
     if (b) gotoStep(b.dataset.goto);
@@ -1885,8 +2124,13 @@ function wireButtons() {
   $('#mineList').addEventListener('click', e => {
     const b = e.target.closest('[data-survey]');
     if (!b) return;
-    const rec = storedSurveys().find(x => x.surveyId === b.dataset.survey);
+    const rec = mySurveys().find(x => x.surveyId === b.dataset.survey);
     if (!rec) { toast(t('That survey is no longer on this device.')); return; }
+    if (b.dataset.act === 'edit') {
+      if (rec.fromSharePoint) { toast(t('From SharePoint — open or export only.')); return; }
+      editSurvey(rec);
+      return;
+    }
     if (b.dataset.act === 'csv') {
       download((rec.surveyId || 'site-survey') + '.csv', toCSV([flattenSurvey(rec)]), 'text/csv');
       toast(t('Data exported as') + ' ' + rec.surveyId + '.csv');
@@ -1896,6 +2140,8 @@ function wireButtons() {
     }
   });
   on('#btnMineExportAll','click', exportAll);
+  on('#btnFetchAll','click', fetchAllSurveys);
+  on('#btnCancelEdit','click', cancelEdit);
   on('#btnSyncNow','click', () => syncPending(false));
   // A phone that regains signal should catch up without being asked.
   window.addEventListener('online', () => syncPending(true));
@@ -1935,6 +2181,7 @@ document.addEventListener('DOMContentLoaded', () => {
   buildStepper();
   buildLoadTable();
   buildPhotoBlocks();
+  buildClearButtons();
   buildSiteSearch();
   bindFields();
   paintScope();

@@ -8,7 +8,6 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="manifest" href="manifest.webmanifest">
 <meta name="description" content="ProstarM site survey for Aadhaar centre UPS installations.">
 <link rel="stylesheet" href="css/style.css">
 </head>
@@ -77,6 +76,10 @@
 
   <main>
     <div id="surveyPanel">
+    <div class="editbar" id="editBar" style="display:none">
+      <span id="editBarText"></span>
+      <button type="button" id="btnCancelEdit" data-i18n="Cancel edit">Cancel edit</button>
+    </div>
     <!-- ============ SITE ============ -->
     <section class="sec active" id="sec-site" data-sec="site">
       <div class="card raised">
@@ -570,16 +573,17 @@
 
     <div id="minePanel" style="display:none">
       <div class="card">
-        <h2 data-i18n="Surveys completed">Surveys completed</h2>
+        <h2 id="mineTitle" data-i18n="Surveys completed">Surveys completed</h2>
         <div class="cbody">
           <div class="minehead">
             <span class="big" id="mineBig">0</span>
-            <span class="lab" data-i18n="submitted from this device">submitted from this device</span>
+            <span class="lab" id="mineScopeLine" data-i18n="submitted from this device">submitted from this device</span>
           </div>
           <p class="hint" data-i18n="Open any survey to see its details, print it or export the data. Surveys stay on this device until the backend is connected.">Open any survey to see its details, print it or export the data. Surveys stay on this device until the backend is connected.</p>
           <p class="hint" id="syncLine" style="display:none;margin:0 0 10px"></p>
           <div class="pbtns" style="margin-top:6px">
             <button type="button" class="pbtn" id="btnSyncNow" style="display:none"></button>
+            <button type="button" class="pbtn alt" id="btnFetchAll" style="display:none" data-i18n="Load all surveys from SharePoint">Load all surveys from SharePoint</button>
             <button type="button" class="pbtn alt" id="btnMineExportAll" data-i18n="Export all surveys">Export all surveys</button>
           </div>
         </div>
@@ -622,6 +626,18 @@
       <button type="button" class="prim" id="btnResume" data-i18n="Resume draft">Resume draft</button>
       <button type="button" id="btnStartNew" data-i18n="Start new survey">Start new survey</button>
       <button type="button" class="danger" id="btnDeleteDraft" data-i18n="Delete draft">Delete draft</button>
+    </div>
+  </div>
+</div></div>
+
+<div class="modal" id="clearModal"><div class="box">
+  <div class="mhead"><h3 data-i18n="Clear this page">Clear this page</h3></div>
+  <div class="mbody">
+    <p class="hint"><span data-i18n="Everything entered on this page will be emptied, including its photographs. The rest of the survey is untouched.">Everything entered on this page will be emptied, including its photographs. The rest of the survey is untouched.</span></p>
+    <p class="hint" style="font-weight:700;color:var(--navy)" id="clearWhat"></p>
+    <div class="mbtns">
+      <button type="button" id="btnClearCancel" data-i18n="Cancel">Cancel</button>
+      <button type="button" class="danger" id="btnClearConfirm" data-i18n="Clear this page">Clear this page</button>
     </div>
   </div>
 </div></div>

@@ -4,7 +4,7 @@
    the masters and the code only change when a new version is pushed.
    Bump CACHE_VERSION whenever you deploy, or phones keep the old copy.
 ------------------------------------------------------------------ */
-const CACHE_VERSION = 'prostarm-site-survey-v8';
+const CACHE_VERSION = 'prostarm-site-survey-v10';
 const ASSETS = [
   './', './index.html',
   './css/style.css',

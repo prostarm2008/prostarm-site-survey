@@ -496,6 +496,15 @@
     },
     "completionPct": {
       "type": "integer"
+    },
+    "revision": {
+      "type": "integer"
+    },
+    "lastEditedAt": {
+      "type": [
+        "string",
+        "null"
+      ]
     }
   },
   "required": [

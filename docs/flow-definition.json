@@ -533,88 +533,10 @@
           }
         }
       },
-      "Create_survey_item": {
-        "type": "OpenApiConnection",
-        "runAfter": {
-          "Parse_survey": [
-            "Succeeded"
-          ]
-        },
-        "inputs": {
-          "host": {
-            "connectionName": "shared_sharepointonline",
-            "operationId": "PostItem",
-            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
-          },
-          "parameters": {
-            "dataset": "https://YOURTENANT.sharepoint.com/sites/YOURSITE",
-            "table": "SiteSurveys",
-            "item/Title": "@{body('Parse_survey')?['surveyId']}",
-            "item/SurveyDate": "@{body('Parse_survey')?['surveyDate']}",
-            "item/StartedAt": "@{body('Parse_survey')?['startedAt']}",
-            "item/SubmittedAt": "@{body('Parse_survey')?['submittedAt']}",
-            "item/EngineerName": "@{body('Parse_survey')?['engineerName']}",
-            "item/EngineerCode": "@{body('Parse_survey')?['engineerId']}",
-            "item/Designation": "@{body('Parse_survey')?['submittedBy']?['designation']}",
-            "item/EngineerBranch": "@{body('Parse_survey')?['submittedBy']?['branch']}",
-            "item/EngineerZone": "@{body('Parse_survey')?['submittedBy']?['zone']}",
-            "item/Role": "@{body('Parse_survey')?['submittedBy']?['role']}",
-            "item/SiteCode": "@{body('Parse_survey')?['site']?['siteCode']}",
-            "item/SiteName": "@{body('Parse_survey')?['site']?['siteName']}",
-            "item/District": "@{body('Parse_survey')?['site']?['district']}",
-            "item/StateName": "@{body('Parse_survey')?['site']?['state']}",
-            "item/SiteBranch": "@{body('Parse_survey')?['site']?['branch']}",
-            "item/SiteZone": "@{body('Parse_survey')?['site']?['zone']}",
-            "item/RegionalOffice": "@{body('Parse_survey')?['site']?['regionalOffice']}",
-            "item/UpsCapacity": "@{body('Parse_survey')?['site']?['upsCapacity']}",
-            "item/SiteCondition": "@{body('Parse_survey')?['site']?['siteCondition']}",
-            "item/Address": "@{body('Parse_survey')?['site']?['address']}",
-            "item/ContactDetails": "@{body('Parse_survey')?['site']?['contactDetails']}",
-            "item/GpsLatitude": "@{body('Parse_survey')?['gps']?['lat']}",
-            "item/GpsLongitude": "@{body('Parse_survey')?['gps']?['lng']}",
-            "item/BranchFloor": "@{body('Parse_survey')?['spaceSafety']?['branchFloor']}",
-            "item/MainDoor": "@{concat(body('Parse_survey')?['spaceSafety']?['mainDoor']?['height'],' x ',body('Parse_survey')?['spaceSafety']?['mainDoor']?['width'],' ',body('Parse_survey')?['spaceSafety']?['mainDoor']?['unit'])}",
-            "item/UpsRoom": "@{concat(body('Parse_survey')?['spaceSafety']?['upsRoom']?['length'],' x ',body('Parse_survey')?['spaceSafety']?['upsRoom']?['breadth'],' x ',body('Parse_survey')?['spaceSafety']?['upsRoom']?['height'],' ',body('Parse_survey')?['spaceSafety']?['upsRoom']?['unit'])}",
-            "item/UpsRoomDoor": "@{concat(body('Parse_survey')?['spaceSafety']?['upsRoomDoor']?['height'],' x ',body('Parse_survey')?['spaceSafety']?['upsRoomDoor']?['width'],' ',body('Parse_survey')?['spaceSafety']?['upsRoomDoor']?['unit'])}",
-            "item/LiftAvailable": "@{body('Parse_survey')?['spaceSafety']?['liftAvailable']}",
-            "item/StairAvailable": "@{body('Parse_survey')?['spaceSafety']?['stairAvailable']}",
-            "item/StairFeasible": "@{body('Parse_survey')?['spaceSafety']?['stairFeasible']}",
-            "item/CraneUnloading": "@{body('Parse_survey')?['spaceSafety']?['craneForUnloading']}",
-            "item/CraneLoading": "@{body('Parse_survey')?['spaceSafety']?['craneForLoadingAtCentre']}",
-            "item/Ventilation": "@{body('Parse_survey')?['spaceSafety']?['ventilation']}",
-            "item/AcAvailability": "@{body('Parse_survey')?['spaceSafety']?['acAvailability']}",
-            "item/WaterLeakage": "@{body('Parse_survey')?['spaceSafety']?['waterLeakage']}",
-            "item/FireExtinguisher": "@{body('Parse_survey')?['spaceSafety']?['fireExtinguisher']}",
-            "item/PowerApplicable": "@{body('Parse_survey')?['powerInputApplicable']}",
-            "item/EbVoltageR": "@{body('Parse_survey')?['powerInput']?['ebVoltage']?['r']}",
-            "item/EbVoltageY": "@{body('Parse_survey')?['powerInput']?['ebVoltage']?['y']}",
-            "item/EbVoltageB": "@{body('Parse_survey')?['powerInput']?['ebVoltage']?['b']}",
-            "item/EarthingAvailable": "@{body('Parse_survey')?['powerInput']?['earthingAvailable']}",
-            "item/EarthingVoltage": "@{body('Parse_survey')?['powerInput']?['earthingVoltage']}",
-            "item/InputCable": "@{concat(body('Parse_survey')?['wireMccb']?['inputCable']?['availability'],' / ',body('Parse_survey')?['wireMccb']?['inputCable']?['sizeSqmm'])}",
-            "item/OutputCable": "@{concat(body('Parse_survey')?['wireMccb']?['outputCable']?['availability'],' / ',body('Parse_survey')?['wireMccb']?['outputCable']?['sizeSqmm'])}",
-            "item/EarthingCable": "@{concat(body('Parse_survey')?['wireMccb']?['earthingCable']?['availability'],' / ',body('Parse_survey')?['wireMccb']?['earthingCable']?['sizeSqmm'])}",
-            "item/InputMccb": "@{concat(body('Parse_survey')?['wireMccb']?['inputMccb']?['availability'],' / ',body('Parse_survey')?['wireMccb']?['inputMccb']?['ratingAmp'],' A / ',body('Parse_survey')?['wireMccb']?['inputMccb']?['type'])}",
-            "item/OutputMccb": "@{concat(body('Parse_survey')?['wireMccb']?['outputMccb']?['availability'],' / ',body('Parse_survey')?['wireMccb']?['outputMccb']?['ratingAmp'],' A / ',body('Parse_survey')?['wireMccb']?['outputMccb']?['type'])}",
-            "item/MatchedRequirement": "@{body('Parse_survey')?['recommendation']?['matchedRequirement']}",
-            "item/LoadDetailsAvailable": "@{body('Parse_survey')?['loadDetailsAvailable']}",
-            "item/TotalLoadKW": "@{body('Parse_survey')?['loadTotals']?['totalLoadKW']}",
-            "item/TotalUpsLoadKW": "@{body('Parse_survey')?['loadTotals']?['totalUpsLoadKW']}",
-            "item/CriticalUpsLoadKW": "@{body('Parse_survey')?['loadTotals']?['criticalUpsLoadKW']}",
-            "item/IssueCount": "@{length(body('Parse_survey')?['issues'])}",
-            "item/Issues": "@{join(body('Parse_survey')?['issues'],' | ')}",
-            "item/EngineerRemarks": "@{body('Parse_survey')?['remarks']?['engineer']}",
-            "item/CustomerRemarks": "@{body('Parse_survey')?['remarks']?['customer']}",
-            "item/CompletionPct": "@{body('Parse_survey')?['completionPct']}",
-            "item/PhotoCount": "@{length(body('Parse_survey')?['photos'])}",
-            "item/RawPayload": "@{string(body('Parse_survey'))}"
-          }
-        }
-      },
       "Apply_to_each_photo": {
         "type": "Foreach",
         "runAfter": {
-          "Create_survey_item": [
+          "Delete_old_load_lines": [
             "Succeeded"
           ]
         },
@@ -642,9 +564,8 @@
       "Apply_to_each_load_row": {
         "type": "Foreach",
         "runAfter": {
-          "Apply_to_each_photo": [
-            "Succeeded",
-            "Skipped"
+          "Delete_old_load_lines": [
+            "Succeeded"
           ]
         },
         "foreach": "@body('Parse_survey')?['loadCalculation']",
@@ -697,6 +618,222 @@
             "itemId": "@{body('Create_survey_item')?['ID']}"
           }
         }
+      },
+      "Find_existing_survey": {
+        "type": "OpenApiConnection",
+        "runAfter": {
+          "Parse_survey": [
+            "Succeeded"
+          ]
+        },
+        "inputs": {
+          "host": {
+            "connectionName": "shared_sharepointonline",
+            "operationId": "GetItems",
+            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+          },
+          "parameters": {
+            "dataset": "https://YOURTENANT.sharepoint.com/sites/YOURSITE",
+            "table": "SiteSurveys",
+            "$filter": "Title eq '@{body('Parse_survey')?['surveyId']}'",
+            "$top": 1
+          }
+        }
+      },
+      "Create_or_update_survey": {
+        "type": "If",
+        "runAfter": {
+          "Find_existing_survey": [
+            "Succeeded"
+          ]
+        },
+        "expression": {
+          "greater": [
+            "@length(body('Find_existing_survey')?['value'])",
+            0
+          ]
+        },
+        "actions": {
+          "Update_survey_item": {
+            "type": "OpenApiConnection",
+            "runAfter": {},
+            "inputs": {
+              "host": {
+                "connectionName": "shared_sharepointonline",
+                "operationId": "PatchItem",
+                "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+              },
+              "parameters": {
+                "dataset": "https://YOURTENANT.sharepoint.com/sites/YOURSITE",
+                "table": "SiteSurveys",
+                "item/Title": "@{body('Parse_survey')?['surveyId']}",
+                "item/SurveyDate": "@{body('Parse_survey')?['surveyDate']}",
+                "item/StartedAt": "@{body('Parse_survey')?['startedAt']}",
+                "item/SubmittedAt": "@{body('Parse_survey')?['submittedAt']}",
+                "item/EngineerName": "@{body('Parse_survey')?['engineerName']}",
+                "item/EngineerCode": "@{body('Parse_survey')?['engineerId']}",
+                "item/Designation": "@{body('Parse_survey')?['submittedBy']?['designation']}",
+                "item/EngineerBranch": "@{body('Parse_survey')?['submittedBy']?['branch']}",
+                "item/EngineerZone": "@{body('Parse_survey')?['submittedBy']?['zone']}",
+                "item/Role": "@{body('Parse_survey')?['submittedBy']?['role']}",
+                "item/SiteCode": "@{body('Parse_survey')?['site']?['siteCode']}",
+                "item/SiteName": "@{body('Parse_survey')?['site']?['siteName']}",
+                "item/District": "@{body('Parse_survey')?['site']?['district']}",
+                "item/StateName": "@{body('Parse_survey')?['site']?['state']}",
+                "item/SiteBranch": "@{body('Parse_survey')?['site']?['branch']}",
+                "item/SiteZone": "@{body('Parse_survey')?['site']?['zone']}",
+                "item/RegionalOffice": "@{body('Parse_survey')?['site']?['regionalOffice']}",
+                "item/UpsCapacity": "@{body('Parse_survey')?['site']?['upsCapacity']}",
+                "item/SiteCondition": "@{body('Parse_survey')?['site']?['siteCondition']}",
+                "item/Address": "@{body('Parse_survey')?['site']?['address']}",
+                "item/ContactDetails": "@{body('Parse_survey')?['site']?['contactDetails']}",
+                "item/GpsLatitude": "@{body('Parse_survey')?['gps']?['lat']}",
+                "item/GpsLongitude": "@{body('Parse_survey')?['gps']?['lng']}",
+                "item/BranchFloor": "@{body('Parse_survey')?['spaceSafety']?['branchFloor']}",
+                "item/MainDoor": "@{concat(body('Parse_survey')?['spaceSafety']?['mainDoor']?['height'],' x ',body('Parse_survey')?['spaceSafety']?['mainDoor']?['width'],' ',body('Parse_survey')?['spaceSafety']?['mainDoor']?['unit'])}",
+                "item/UpsRoom": "@{concat(body('Parse_survey')?['spaceSafety']?['upsRoom']?['length'],' x ',body('Parse_survey')?['spaceSafety']?['upsRoom']?['breadth'],' x ',body('Parse_survey')?['spaceSafety']?['upsRoom']?['height'],' ',body('Parse_survey')?['spaceSafety']?['upsRoom']?['unit'])}",
+                "item/UpsRoomDoor": "@{concat(body('Parse_survey')?['spaceSafety']?['upsRoomDoor']?['height'],' x ',body('Parse_survey')?['spaceSafety']?['upsRoomDoor']?['width'],' ',body('Parse_survey')?['spaceSafety']?['upsRoomDoor']?['unit'])}",
+                "item/LiftAvailable": "@{body('Parse_survey')?['spaceSafety']?['liftAvailable']}",
+                "item/StairAvailable": "@{body('Parse_survey')?['spaceSafety']?['stairAvailable']}",
+                "item/StairFeasible": "@{body('Parse_survey')?['spaceSafety']?['stairFeasible']}",
+                "item/CraneUnloading": "@{body('Parse_survey')?['spaceSafety']?['craneForUnloading']}",
+                "item/CraneLoading": "@{body('Parse_survey')?['spaceSafety']?['craneForLoadingAtCentre']}",
+                "item/Ventilation": "@{body('Parse_survey')?['spaceSafety']?['ventilation']}",
+                "item/AcAvailability": "@{body('Parse_survey')?['spaceSafety']?['acAvailability']}",
+                "item/WaterLeakage": "@{body('Parse_survey')?['spaceSafety']?['waterLeakage']}",
+                "item/FireExtinguisher": "@{body('Parse_survey')?['spaceSafety']?['fireExtinguisher']}",
+                "item/PowerApplicable": "@{body('Parse_survey')?['powerInputApplicable']}",
+                "item/EbVoltageR": "@{body('Parse_survey')?['powerInput']?['ebVoltage']?['r']}",
+                "item/EbVoltageY": "@{body('Parse_survey')?['powerInput']?['ebVoltage']?['y']}",
+                "item/EbVoltageB": "@{body('Parse_survey')?['powerInput']?['ebVoltage']?['b']}",
+                "item/EarthingAvailable": "@{body('Parse_survey')?['powerInput']?['earthingAvailable']}",
+                "item/EarthingVoltage": "@{body('Parse_survey')?['powerInput']?['earthingVoltage']}",
+                "item/InputCable": "@{concat(body('Parse_survey')?['wireMccb']?['inputCable']?['availability'],' / ',body('Parse_survey')?['wireMccb']?['inputCable']?['sizeSqmm'])}",
+                "item/OutputCable": "@{concat(body('Parse_survey')?['wireMccb']?['outputCable']?['availability'],' / ',body('Parse_survey')?['wireMccb']?['outputCable']?['sizeSqmm'])}",
+                "item/EarthingCable": "@{concat(body('Parse_survey')?['wireMccb']?['earthingCable']?['availability'],' / ',body('Parse_survey')?['wireMccb']?['earthingCable']?['sizeSqmm'])}",
+                "item/InputMccb": "@{concat(body('Parse_survey')?['wireMccb']?['inputMccb']?['availability'],' / ',body('Parse_survey')?['wireMccb']?['inputMccb']?['ratingAmp'],' A / ',body('Parse_survey')?['wireMccb']?['inputMccb']?['type'])}",
+                "item/OutputMccb": "@{concat(body('Parse_survey')?['wireMccb']?['outputMccb']?['availability'],' / ',body('Parse_survey')?['wireMccb']?['outputMccb']?['ratingAmp'],' A / ',body('Parse_survey')?['wireMccb']?['outputMccb']?['type'])}",
+                "item/MatchedRequirement": "@{body('Parse_survey')?['recommendation']?['matchedRequirement']}",
+                "item/LoadDetailsAvailable": "@{body('Parse_survey')?['loadDetailsAvailable']}",
+                "item/TotalLoadKW": "@{body('Parse_survey')?['loadTotals']?['totalLoadKW']}",
+                "item/TotalUpsLoadKW": "@{body('Parse_survey')?['loadTotals']?['totalUpsLoadKW']}",
+                "item/CriticalUpsLoadKW": "@{body('Parse_survey')?['loadTotals']?['criticalUpsLoadKW']}",
+                "item/IssueCount": "@{length(body('Parse_survey')?['issues'])}",
+                "item/Issues": "@{join(body('Parse_survey')?['issues'],' | ')}",
+                "item/EngineerRemarks": "@{body('Parse_survey')?['remarks']?['engineer']}",
+                "item/CustomerRemarks": "@{body('Parse_survey')?['remarks']?['customer']}",
+                "item/CompletionPct": "@{body('Parse_survey')?['completionPct']}",
+                "item/PhotoCount": "@{length(body('Parse_survey')?['photos'])}",
+                "item/RawPayload": "@{string(body('Parse_survey'))}",
+                "item/Revision": "@{coalesce(body('Parse_survey')?['revision'], 1)}",
+                "item/LastEditedAt": "@{body('Parse_survey')?['lastEditedAt']}",
+                "id": "@{first(body('Find_existing_survey')?['value'])?['ID']}",
+                "item/Id": "@{first(body('Find_existing_survey')?['value'])?['ID']}"
+              }
+            }
+          }
+        },
+        "else": {
+          "actions": {
+            "Create_survey_item": {
+              "type": "OpenApiConnection",
+              "runAfter": {},
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "PostItem",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "https://YOURTENANT.sharepoint.com/sites/YOURSITE",
+                  "table": "SiteSurveys",
+                  "item/Title": "@{body('Parse_survey')?['surveyId']}",
+                  "item/SurveyDate": "@{body('Parse_survey')?['surveyDate']}",
+                  "item/StartedAt": "@{body('Parse_survey')?['startedAt']}",
+                  "item/SubmittedAt": "@{body('Parse_survey')?['submittedAt']}",
+                  "item/EngineerName": "@{body('Parse_survey')?['engineerName']}",
+                  "item/EngineerCode": "@{body('Parse_survey')?['engineerId']}",
+                  "item/Designation": "@{body('Parse_survey')?['submittedBy']?['designation']}",
+                  "item/EngineerBranch": "@{body('Parse_survey')?['submittedBy']?['branch']}",
+                  "item/EngineerZone": "@{body('Parse_survey')?['submittedBy']?['zone']}",
+                  "item/Role": "@{body('Parse_survey')?['submittedBy']?['role']}",
+                  "item/SiteCode": "@{body('Parse_survey')?['site']?['siteCode']}",
+                  "item/SiteName": "@{body('Parse_survey')?['site']?['siteName']}",
+                  "item/District": "@{body('Parse_survey')?['site']?['district']}",
+                  "item/StateName": "@{body('Parse_survey')?['site']?['state']}",
+                  "item/SiteBranch": "@{body('Parse_survey')?['site']?['branch']}",
+                  "item/SiteZone": "@{body('Parse_survey')?['site']?['zone']}",
+                  "item/RegionalOffice": "@{body('Parse_survey')?['site']?['regionalOffice']}",
+                  "item/UpsCapacity": "@{body('Parse_survey')?['site']?['upsCapacity']}",
+                  "item/SiteCondition": "@{body('Parse_survey')?['site']?['siteCondition']}",
+                  "item/Address": "@{body('Parse_survey')?['site']?['address']}",
+                  "item/ContactDetails": "@{body('Parse_survey')?['site']?['contactDetails']}",
+                  "item/GpsLatitude": "@{body('Parse_survey')?['gps']?['lat']}",
+                  "item/GpsLongitude": "@{body('Parse_survey')?['gps']?['lng']}",
+                  "item/BranchFloor": "@{body('Parse_survey')?['spaceSafety']?['branchFloor']}",
+                  "item/MainDoor": "@{concat(body('Parse_survey')?['spaceSafety']?['mainDoor']?['height'],' x ',body('Parse_survey')?['spaceSafety']?['mainDoor']?['width'],' ',body('Parse_survey')?['spaceSafety']?['mainDoor']?['unit'])}",
+                  "item/UpsRoom": "@{concat(body('Parse_survey')?['spaceSafety']?['upsRoom']?['length'],' x ',body('Parse_survey')?['spaceSafety']?['upsRoom']?['breadth'],' x ',body('Parse_survey')?['spaceSafety']?['upsRoom']?['height'],' ',body('Parse_survey')?['spaceSafety']?['upsRoom']?['unit'])}",
+                  "item/UpsRoomDoor": "@{concat(body('Parse_survey')?['spaceSafety']?['upsRoomDoor']?['height'],' x ',body('Parse_survey')?['spaceSafety']?['upsRoomDoor']?['width'],' ',body('Parse_survey')?['spaceSafety']?['upsRoomDoor']?['unit'])}",
+                  "item/LiftAvailable": "@{body('Parse_survey')?['spaceSafety']?['liftAvailable']}",
+                  "item/StairAvailable": "@{body('Parse_survey')?['spaceSafety']?['stairAvailable']}",
+                  "item/StairFeasible": "@{body('Parse_survey')?['spaceSafety']?['stairFeasible']}",
+                  "item/CraneUnloading": "@{body('Parse_survey')?['spaceSafety']?['craneForUnloading']}",
+                  "item/CraneLoading": "@{body('Parse_survey')?['spaceSafety']?['craneForLoadingAtCentre']}",
+                  "item/Ventilation": "@{body('Parse_survey')?['spaceSafety']?['ventilation']}",
+                  "item/AcAvailability": "@{body('Parse_survey')?['spaceSafety']?['acAvailability']}",
+                  "item/WaterLeakage": "@{body('Parse_survey')?['spaceSafety']?['waterLeakage']}",
+                  "item/FireExtinguisher": "@{body('Parse_survey')?['spaceSafety']?['fireExtinguisher']}",
+                  "item/PowerApplicable": "@{body('Parse_survey')?['powerInputApplicable']}",
+                  "item/EbVoltageR": "@{body('Parse_survey')?['powerInput']?['ebVoltage']?['r']}",
+                  "item/EbVoltageY": "@{body('Parse_survey')?['powerInput']?['ebVoltage']?['y']}",
+                  "item/EbVoltageB": "@{body('Parse_survey')?['powerInput']?['ebVoltage']?['b']}",
+                  "item/EarthingAvailable": "@{body('Parse_survey')?['powerInput']?['earthingAvailable']}",
+                  "item/EarthingVoltage": "@{body('Parse_survey')?['powerInput']?['earthingVoltage']}",
+                  "item/InputCable": "@{concat(body('Parse_survey')?['wireMccb']?['inputCable']?['availability'],' / ',body('Parse_survey')?['wireMccb']?['inputCable']?['sizeSqmm'])}",
+                  "item/OutputCable": "@{concat(body('Parse_survey')?['wireMccb']?['outputCable']?['availability'],' / ',body('Parse_survey')?['wireMccb']?['outputCable']?['sizeSqmm'])}",
+                  "item/EarthingCable": "@{concat(body('Parse_survey')?['wireMccb']?['earthingCable']?['availability'],' / ',body('Parse_survey')?['wireMccb']?['earthingCable']?['sizeSqmm'])}",
+                  "item/InputMccb": "@{concat(body('Parse_survey')?['wireMccb']?['inputMccb']?['availability'],' / ',body('Parse_survey')?['wireMccb']?['inputMccb']?['ratingAmp'],' A / ',body('Parse_survey')?['wireMccb']?['inputMccb']?['type'])}",
+                  "item/OutputMccb": "@{concat(body('Parse_survey')?['wireMccb']?['outputMccb']?['availability'],' / ',body('Parse_survey')?['wireMccb']?['outputMccb']?['ratingAmp'],' A / ',body('Parse_survey')?['wireMccb']?['outputMccb']?['type'])}",
+                  "item/MatchedRequirement": "@{body('Parse_survey')?['recommendation']?['matchedRequirement']}",
+                  "item/LoadDetailsAvailable": "@{body('Parse_survey')?['loadDetailsAvailable']}",
+                  "item/TotalLoadKW": "@{body('Parse_survey')?['loadTotals']?['totalLoadKW']}",
+                  "item/TotalUpsLoadKW": "@{body('Parse_survey')?['loadTotals']?['totalUpsLoadKW']}",
+                  "item/CriticalUpsLoadKW": "@{body('Parse_survey')?['loadTotals']?['criticalUpsLoadKW']}",
+                  "item/IssueCount": "@{length(body('Parse_survey')?['issues'])}",
+                  "item/Issues": "@{join(body('Parse_survey')?['issues'],' | ')}",
+                  "item/EngineerRemarks": "@{body('Parse_survey')?['remarks']?['engineer']}",
+                  "item/CustomerRemarks": "@{body('Parse_survey')?['remarks']?['customer']}",
+                  "item/CompletionPct": "@{body('Parse_survey')?['completionPct']}",
+                  "item/PhotoCount": "@{length(body('Parse_survey')?['photos'])}",
+                  "item/RawPayload": "@{string(body('Parse_survey'))}",
+                  "item/Revision": "@{coalesce(body('Parse_survey')?['revision'], 1)}",
+                  "item/LastEditedAt": "@{body('Parse_survey')?['lastEditedAt']}"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Delete_old_load_lines": {
+        "type": "OpenApiConnection",
+        "runAfter": {
+          "Create_or_update_survey": [
+            "Succeeded"
+          ]
+        },
+        "inputs": {
+          "host": {
+            "connectionName": "shared_sharepointonline",
+            "operationId": "GetItems",
+            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+          },
+          "parameters": {
+            "dataset": "https://YOURTENANT.sharepoint.com/sites/YOURSITE",
+            "table": "SiteSurveyLoadLines",
+            "$filter": "SurveyId eq '@{body('Parse_survey')?['surveyId']}'"
+          }
+        },
+        "description": "On a revision these are deleted in the Apply to each below before the new rows are written."
       }
     },
     "outputs": {}
