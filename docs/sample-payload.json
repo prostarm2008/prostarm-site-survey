@@ -1,0 +1,189 @@
+{
+  "surveyId": "SS-20260911-PRO2220559-001",
+  "surveyDate": "2026-09-11",
+  "startedAt": "2026-09-11T07:36:31.477Z",
+  "submittedAt": "2026-09-11T07:36:39.726Z",
+  "engineerName": "Kiran Kumar",
+  "engineerId": "PM1136",
+  "submittedBy": {
+    "userId": "PM1136",
+    "name": "Kiran Kumar",
+    "role": "engineer",
+    "designation": "Field Engineer",
+    "branch": "KN_Bangalore",
+    "zone": "South - 1",
+    "managerCode": "PM086",
+    "managerName": "Naveen Kumar P"
+  },
+  "gps": {
+    "lat": 19.033,
+    "lng": 73.0297,
+    "accuracy": 0,
+    "ts": "2026-09-11T07:36:34.789Z"
+  },
+  "site": {
+    "siteCode": "PRO2220559",
+    "siteName": "Haveri",
+    "address": "Moktali Building, Hanagal Road, Opp. Bus stand, Haveri, 581110",
+    "district": "Haveri",
+    "state": "Karnataka",
+    "branch": "KN_Bangalore",
+    "zone": "South - 1",
+    "contactDetails": "Joseph-80954 36012 &Abid-78999 95080/Gajendra Gujjala-9177200402",
+    "regionalOffice": "Bengaluru",
+    "upsCapacity": "20KVA - 4 Hours",
+    "siteCondition": "Interior Completed \u2013 Electrical Work WIP"
+  },
+  "loadDetailsAvailable": false,
+  "loadCalculation": [],
+  "loadTotals": null,
+  "spaceSafety": {
+    "branchFloor": "Ground Floor",
+    "branchFloorOther": "",
+    "mainDoor": {
+      "height": "",
+      "width": "",
+      "unit": "Feet"
+    },
+    "upsRoom": {
+      "length": "",
+      "breadth": "",
+      "height": "",
+      "unit": "Feet"
+    },
+    "upsRoomDoor": {
+      "height": "",
+      "width": "",
+      "unit": "Feet"
+    },
+    "liftAvailable": "Not Required as Location at Ground Floor",
+    "liftDoor": {
+      "height": "",
+      "width": "",
+      "unit": "Feet"
+    },
+    "stairAvailable": "Yes",
+    "stairFeasible": "Not Applicable",
+    "craneForUnloading": "No",
+    "craneForLoadingAtCentre": "No",
+    "ventilation": "Good",
+    "acAvailability": "Available",
+    "waterLeakage": "No",
+    "fireExtinguisher": "Yes"
+  },
+  "powerInputApplicable": false,
+  "powerInput": null,
+  "wireMccb": {
+    "inputCable": {
+      "availability": "Electrical Work Not Completed",
+      "sizeSqmm": ""
+    },
+    "outputCable": {
+      "availability": "Electrical Work Not Completed",
+      "sizeSqmm": ""
+    },
+    "earthingCable": {
+      "availability": "Electrical Work Not Completed",
+      "sizeSqmm": ""
+    },
+    "inputMccb": {
+      "availability": "Electrical Work Not Completed",
+      "ratingAmp": "",
+      "type": ""
+    },
+    "outputMccb": {
+      "availability": "Electrical Work Not Completed",
+      "ratingAmp": "",
+      "type": ""
+    }
+  },
+  "recommendation": {
+    "source": "Line Diagram Master",
+    "matchedRequirement": "20kVA - 4 Hr",
+    "inputWire": "12",
+    "inputMccb": "63",
+    "outputWire": "10",
+    "outputMccb": "42",
+    "earthingWire": "6"
+  },
+  "comparison": [
+    {
+      "label": "Input cable",
+      "actual": "Electrical work not completed",
+      "recommended": "12 Sq mm",
+      "status": "Electrical work not completed",
+      "cls": "warn"
+    },
+    {
+      "label": "Input MCCB",
+      "actual": "Electrical work not completed",
+      "recommended": "63 A",
+      "status": "Electrical work not completed",
+      "cls": "warn"
+    },
+    {
+      "label": "Output cable",
+      "actual": "Electrical work not completed",
+      "recommended": "10 Sq mm",
+      "status": "Electrical work not completed",
+      "cls": "warn"
+    },
+    {
+      "label": "Output MCCB",
+      "actual": "Electrical work not completed",
+      "recommended": "42 A",
+      "status": "Electrical work not completed",
+      "cls": "warn"
+    },
+    {
+      "label": "Earthing cable",
+      "actual": "Electrical work not completed",
+      "recommended": "6 Sq mm",
+      "status": "Electrical work not completed",
+      "cls": "warn"
+    }
+  ],
+  "issues": [
+    "Input cable \u2014 electrical work not completed",
+    "Output cable \u2014 electrical work not completed",
+    "Earthing cable \u2014 electrical work not completed",
+    "Input MCCB \u2014 electrical work not completed",
+    "Output MCCB \u2014 electrical work not completed",
+    "Load calculation details not available at the centre"
+  ],
+  "photos": [
+    {
+      "section": "sitecondition",
+      "sectionLabel": "Site condition",
+      "id": "P1789112194408io19",
+      "timestamp": "2026-09-11T07:36:34.414Z",
+      "caption": "",
+      "dataUrl": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...TRUNCATED_FOR_READABILITY"
+    },
+    {
+      "section": "safety",
+      "sectionLabel": "Space and safety check for lithium battery",
+      "id": "P1789112196714ypyd",
+      "timestamp": "2026-09-11T07:36:36.726Z",
+      "caption": "",
+      "dataUrl": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...TRUNCATED_FOR_READABILITY"
+    },
+    {
+      "section": "wire",
+      "sectionLabel": "Wire and MCCB found at site",
+      "id": "P17891121977090njt",
+      "timestamp": "2026-09-11T07:36:37.731Z",
+      "caption": "",
+      "dataUrl": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...TRUNCATED_FOR_READABILITY"
+    }
+  ],
+  "remarks": {
+    "engineer": "",
+    "customer": ""
+  },
+  "completionPct": 100,
+  "syncStatus": "pending",
+  "syncError": "Failed to fetch",
+  "syncedAt": null,
+  "sharePointItemId": null
+}

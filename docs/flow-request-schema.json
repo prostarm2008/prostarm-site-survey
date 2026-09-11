@@ -1,0 +1,507 @@
+{
+  "type": "object",
+  "properties": {
+    "surveyId": {
+      "type": "string"
+    },
+    "surveyDate": {
+      "type": "string"
+    },
+    "startedAt": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "submittedAt": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "engineerName": {
+      "type": "string"
+    },
+    "engineerId": {
+      "type": "string"
+    },
+    "submittedBy": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "designation": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "zone": {
+          "type": "string"
+        },
+        "managerCode": {
+          "type": "string"
+        },
+        "managerName": {
+          "type": "string"
+        }
+      }
+    },
+    "gps": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "lat": {
+          "type": "number"
+        },
+        "lng": {
+          "type": "number"
+        },
+        "accuracy": {
+          "type": "number"
+        },
+        "ts": {
+          "type": "string"
+        }
+      }
+    },
+    "site": {
+      "type": "object",
+      "properties": {
+        "siteCode": {
+          "type": "string"
+        },
+        "siteName": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        },
+        "district": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "zone": {
+          "type": "string"
+        },
+        "contactDetails": {
+          "type": "string"
+        },
+        "regionalOffice": {
+          "type": "string"
+        },
+        "upsCapacity": {
+          "type": "string"
+        },
+        "siteCondition": {
+          "type": "string"
+        }
+      }
+    },
+    "loadDetailsAvailable": {
+      "type": "boolean"
+    },
+    "loadCalculation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "i": {
+            "type": "integer"
+          },
+          "item": {
+            "type": "string"
+          },
+          "count": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "watts": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "countOnUps": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "loadW": {
+            "type": "number"
+          },
+          "loadOnUpsW": {
+            "type": "number"
+          },
+          "critical": {
+            "type": "string"
+          },
+          "remarks": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "loadTotals": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "totalLoadW": {
+          "type": "number"
+        },
+        "totalLoadKW": {
+          "type": "number"
+        },
+        "totalUpsLoadW": {
+          "type": "number"
+        },
+        "totalUpsLoadKW": {
+          "type": "number"
+        },
+        "criticalUpsLoadW": {
+          "type": "number"
+        },
+        "criticalUpsLoadKW": {
+          "type": "number"
+        }
+      }
+    },
+    "spaceSafety": {
+      "type": "object",
+      "properties": {
+        "branchFloor": {
+          "type": "string"
+        },
+        "branchFloorOther": {
+          "type": "string"
+        },
+        "mainDoor": {
+          "type": "object",
+          "properties": {
+            "height": {
+              "type": "string"
+            },
+            "width": {
+              "type": "string"
+            },
+            "unit": {
+              "type": "string"
+            }
+          }
+        },
+        "upsRoom": {
+          "type": "object",
+          "properties": {
+            "length": {
+              "type": "string"
+            },
+            "breadth": {
+              "type": "string"
+            },
+            "height": {
+              "type": "string"
+            },
+            "unit": {
+              "type": "string"
+            }
+          }
+        },
+        "upsRoomDoor": {
+          "type": "object",
+          "properties": {
+            "height": {
+              "type": "string"
+            },
+            "width": {
+              "type": "string"
+            },
+            "unit": {
+              "type": "string"
+            }
+          }
+        },
+        "liftAvailable": {
+          "type": "string"
+        },
+        "liftDoor": {
+          "type": "object",
+          "properties": {
+            "height": {
+              "type": "string"
+            },
+            "width": {
+              "type": "string"
+            },
+            "unit": {
+              "type": "string"
+            }
+          }
+        },
+        "stairAvailable": {
+          "type": "string"
+        },
+        "stairFeasible": {
+          "type": "string"
+        },
+        "craneForUnloading": {
+          "type": "string"
+        },
+        "craneForLoadingAtCentre": {
+          "type": "string"
+        },
+        "ventilation": {
+          "type": "string"
+        },
+        "acAvailability": {
+          "type": "string"
+        },
+        "waterLeakage": {
+          "type": "string"
+        },
+        "fireExtinguisher": {
+          "type": "string"
+        }
+      }
+    },
+    "powerInputApplicable": {
+      "type": "boolean"
+    },
+    "powerInput": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "ebVoltage": {
+          "type": "object",
+          "properties": {
+            "r": {
+              "type": "string"
+            },
+            "y": {
+              "type": "string"
+            },
+            "b": {
+              "type": "string"
+            }
+          }
+        },
+        "phaseLoadAmp": {
+          "type": "object",
+          "properties": {
+            "phase1": {
+              "type": "string"
+            },
+            "phase2": {
+              "type": "string"
+            },
+            "phase3": {
+              "type": "string"
+            }
+          }
+        },
+        "earthingAvailable": {
+          "type": "string"
+        },
+        "earthingVoltage": {
+          "type": "string"
+        }
+      }
+    },
+    "wireMccb": {
+      "type": "object",
+      "properties": {
+        "inputCable": {
+          "type": "object",
+          "properties": {
+            "availability": {
+              "type": "string"
+            },
+            "sizeSqmm": {
+              "type": "string"
+            }
+          }
+        },
+        "outputCable": {
+          "type": "object",
+          "properties": {
+            "availability": {
+              "type": "string"
+            },
+            "sizeSqmm": {
+              "type": "string"
+            }
+          }
+        },
+        "earthingCable": {
+          "type": "object",
+          "properties": {
+            "availability": {
+              "type": "string"
+            },
+            "sizeSqmm": {
+              "type": "string"
+            }
+          }
+        },
+        "inputMccb": {
+          "type": "object",
+          "properties": {
+            "availability": {
+              "type": "string"
+            },
+            "ratingAmp": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            }
+          }
+        },
+        "outputMccb": {
+          "type": "object",
+          "properties": {
+            "availability": {
+              "type": "string"
+            },
+            "ratingAmp": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "matchedRequirement": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "inputWire": {
+          "type": "string"
+        },
+        "inputMccb": {
+          "type": "string"
+        },
+        "outputWire": {
+          "type": "string"
+        },
+        "outputMccb": {
+          "type": "string"
+        },
+        "earthingWire": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "comparison": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "actual": {
+            "type": "string"
+          },
+          "recommended": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "cls": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "photos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "section": {
+            "type": "string"
+          },
+          "sectionLabel": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "caption": {
+            "type": "string"
+          },
+          "dataUrl": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "remarks": {
+      "type": "object",
+      "properties": {
+        "engineer": {
+          "type": "string"
+        },
+        "customer": {
+          "type": "string"
+        }
+      }
+    },
+    "completionPct": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "surveyId",
+    "surveyDate",
+    "engineerId",
+    "site"
+  ]
+}

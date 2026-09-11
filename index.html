@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Site Survey — ProstarM</title>
+<meta name="theme-color" content="#0b3f7a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="description" content="ProstarM site survey for Aadhaar centre UPS installations.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="loginView">
+  <div class="loginbox">
+    <div class="loginhead">
+      <img class="loginlogo" id="loginLogo" alt="ProstarM — Power Redefined">
+      <div class="langtoggle" id="langToggle">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="hi" aria-pressed="false">हिं</button>
+      </div>
+    </div>
+    <div class="loginbody">
+      <h1 data-i18n="Site Survey">Site Survey</h1>
+      <p class="sub" data-i18n="Sign in with the employee code and password issued by your regional office.">Sign in with the employee code and password issued by your regional office.</p>
+      <div id="loginMsg"></div>
+      <div class="f">
+        <label for="loginUser" data-i18n="User ID">User ID</label>
+        <input type="text" id="loginUser" autocomplete="username" autocapitalize="characters" placeholder="Employee code" data-i18n-ph="Employee code">
+      </div>
+      <div class="f">
+        <label for="loginPass" data-i18n="Password">Password</label>
+        <div class="pwrow">
+          <input type="password" id="loginPass" autocomplete="current-password">
+          <button type="button" id="btnShowPass">Show</button>
+        </div>
+      </div>
+      <label class="opt remember"><input type="checkbox" id="loginRemember" checked><span data-i18n="Keep me signed in on this phone">Keep me signed in on this phone</span></label>
+      <button type="button" id="btnLogin" data-i18n="Sign in">Sign in</button>
+      <p class="loginfoot" data-i18n="Surveys are stamped with the signed-in engineer. Drafts stay on this phone until the survey is submitted.">Surveys are stamped with the signed-in engineer. Drafts stay on this phone until the survey is submitted.</p>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="appbar" id="appbar">
+    <div class="appbar-row">
+      <div class="brand-group">
+        <img class="brand-logo" id="hdrLogo" alt="ProstarM">
+        <div class="brand-text"><b data-i18n="Site Survey">Site Survey</b><span data-i18n="Anweta Venture">Anweta Venture</span></div>
+      </div>
+      <div class="idbox">
+        <strong id="hdrSurveyId">Survey ID pending</strong>
+        <span class="pill" id="hdrStatus">Draft</span>
+      </div>
+    </div>
+    <div class="userrow" id="userChipWrap" style="display:none">
+      <span id="userChip"></span>
+      <div class="langtoggle" id="langToggleApp">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="hi" aria-pressed="false">हिं</button>
+      </div>
+      <button type="button" id="btnLogout" data-i18n="Sign out">Sign out</button>
+    </div>
+    <div class="progressbar"><i id="hdrProgress"></i></div>
+  </div>
+
+  <div class="viewtabs" id="viewTabs">
+    <button type="button" data-view="survey" aria-selected="true"><span data-i18n="New survey">New survey</span></button>
+    <button type="button" data-view="mine" aria-selected="false"><span data-i18n="My surveys">My surveys</span><span class="cnt" id="mineCount">0</span></button>
+  </div>
+
+  <nav class="stepper" id="stepper" aria-label="Survey sections"></nav>
+
+  <main>
+    <div id="surveyPanel">
+    <!-- ============ SITE ============ -->
+    <section class="sec active" id="sec-site" data-sec="site">
+      <div class="card raised">
+        <h2 data-i18n="Select site">Select site</h2>
+        <div class="cbody">
+          <p class="hint" data-i18n="Search by site code, site name, district, state or branch. Site details are read-only and come from the Site Master.">Search by site code, site name, district, state or branch. Site details are read-only and come from the Site Master.</p>
+          <div class="scope" id="siteScope">
+            <button type="button" data-scope="branch" aria-pressed="true" data-i18n="My branch">My branch</button>
+            <button type="button" data-scope="all" aria-pressed="false" data-i18n="All sites">All sites</button>
+            <select id="stateFilter" aria-label="Filter by state"></select>
+          </div>
+          <div class="f search-wrap">
+            <label for="siteSearch" class="req" data-i18n="Site">Site</label>
+            <input type="text" id="siteSearch" placeholder="e.g. PRO2220581, Chittoor, Andhra Pradesh" data-i18n-ph="e.g. PRO2220581, Chittoor, Andhra Pradesh" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="siteResults">
+            <div class="results" id="siteResults" role="listbox"></div>
+            <div class="err" id="err-site" data-i18n="Select a site from the Site Master to continue.">Select a site from the Site Master to continue.</div>
+          </div>
+
+          <div id="siteBlock" style="display:none;margin-top:14px">
+            <div class="headline">
+              <div><span data-i18n="Site code">Site code</span><strong id="hSiteCode">—</strong></div>
+              <div><span data-i18n="Site name">Site name</span><strong id="hSiteName">—</strong></div>
+              <div class="cap"><span data-i18n="UPS capacity">UPS capacity</span><strong id="hUpsCap">—</strong></div>
+            </div>
+            <dl class="master">
+              <div class="kv"><dt data-i18n="Address">Address</dt><dd id="mAddress">—</dd></div>
+              <div class="kv"><dt data-i18n="District">District</dt><dd id="mDistrict">—</dd></div>
+              <div class="kv"><dt data-i18n="State">State</dt><dd id="mState">—</dd></div>
+              <div class="kv"><dt data-i18n="Branch / zone">Branch / zone</dt><dd id="mBranch">—</dd></div>
+              <div class="kv"><dt data-i18n="Contact">Contact</dt><dd id="mContact">—</dd></div>
+              <div class="kv"><dt data-i18n="Regional office">Regional office</dt><dd id="mRO">—</dd></div>
+            </dl>
+          </div>
+        </div>
+      </div>
+
+      <!-- Engineer name, employee ID and survey date are captured silently from the
+           login and the device clock, and travel with the submitted record. -->
+      <input type="hidden" id="engineerName">
+      <input type="hidden" id="engineerId">
+      <input type="hidden" id="surveyDate">
+
+      <div class="card">
+        <h2 data-i18n="Site condition">Site condition</h2>
+        <div class="cbody">
+          <div class="f">
+            <span class="lab req" data-i18n="Condition observed at site">Condition observed at site</span>
+            <div class="opts stack" id="siteCondition">
+              <label class="opt"><input type="radio" name="siteCondition" value="Interior Ready with Electrical Work"><span data-i18n="Interior ready with electrical work">Interior ready with electrical work</span></label>
+              <label class="opt"><input type="radio" name="siteCondition" value="Interior Construction Going-On"><span data-i18n="Interior construction going-on">Interior construction going-on</span></label>
+              <label class="opt"><input type="radio" name="siteCondition" value="Interior Completed – Electrical Work Pending"><span data-i18n="Interior completed – electrical work pending">Interior completed – electrical work pending</span></label>
+              <label class="opt"><input type="radio" name="siteCondition" value="Interior Completed – Electrical Work WIP"><span data-i18n="Interior completed – electrical work WIP">Interior completed – electrical work WIP</span></label>
+            </div>
+            <div class="err" id="err-siteCondition" data-i18n="Select the site condition.">Select the site condition.</div>
+            <p class="hint" id="powerNote" style="margin:10px 0 0;display:none"></p>
+          </div>
+
+          <h3 data-i18n="Site condition photographs">Site condition photographs</h3>
+          <div class="photos" data-photo="sitecondition" data-label="Site condition"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="Location">Location</h2>
+        <div class="cbody">
+          <p class="hint" data-i18n="Capture the GPS location while standing at the site. This is required before the survey can be submitted.">Capture the GPS location while standing at the site. This is required before the survey can be submitted.</p>
+          <div class="gps" id="gpsBox">
+            <button type="button" id="btnGps">Capture location</button>
+            <span class="out" id="gpsOut">Location not captured.</span>
+          </div>
+          <div class="err" id="err-gps" data-i18n="Capture the GPS location at the site. If it fails, move near a window or step outside and try again.">Capture the GPS location at the site. If it fails, move near a window or step outside and try again.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SAFETY ============ -->
+    <section class="sec" id="sec-safety" data-sec="safety">
+      <div class="card">
+        <h2 data-i18n="Space and safety check for lithium battery">Space and safety check for lithium battery</h2>
+        <div class="cbody">
+
+          <h3 data-i18n="Branch floor">Branch floor</h3>
+          <div class="f">
+            <span class="lab req" data-i18n="Branch located at which floor">Branch located at which floor</span>
+            <div class="opts" id="branchFloor">
+              <label class="opt"><input type="radio" name="branchFloor" value="Ground Floor"><span data-i18n="Ground floor">Ground floor</span></label>
+              <label class="opt"><input type="radio" name="branchFloor" value="1st Floor"><span data-i18n="1st floor">1st floor</span></label>
+              <label class="opt"><input type="radio" name="branchFloor" value="2nd Floor"><span data-i18n="2nd floor">2nd floor</span></label>
+              <label class="opt"><input type="radio" name="branchFloor" value="3rd Floor"><span data-i18n="3rd floor">3rd floor</span></label>
+              <label class="opt"><input type="radio" name="branchFloor" value="Other"><span data-i18n="Other">Other</span></label>
+            </div>
+            <div class="err" id="err-branchFloor" data-i18n="Select the branch floor.">Select the branch floor.</div>
+            <div id="branchFloorOtherWrap" style="display:none;margin-top:9px">
+              <label for="branchFloorOther" data-i18n="Specify floor">Specify floor</label>
+              <input type="text" id="branchFloorOther" data-save placeholder="e.g. 4th floor / basement" data-i18n-ph="e.g. 4th floor / basement">
+            </div>
+          </div>
+
+          <h3 data-i18n="Main door dimension">Main door dimension</h3>
+          <div class="inline">
+            <div class="f"><label for="mainDoorH" data-i18n="Height">Height</label><input type="number" id="mainDoorH" data-save inputmode="decimal" min="0" step="any"></div>
+            <div class="f"><label for="mainDoorW" data-i18n="Width">Width</label><input type="number" id="mainDoorW" data-save inputmode="decimal" min="0" step="any"></div>
+            <div class="f unit"><label for="mainDoorUnit" data-i18n="Unit">Unit</label>
+              <select id="mainDoorUnit" data-save><option data-i18n="Feet">Feet</option><option data-i18n="Inch">Inch</option><option data-i18n="mm">mm</option><option data-i18n="cm">cm</option></select>
+            </div>
+          </div>
+
+          <h3 data-i18n="UPS room dimension">UPS room dimension</h3>
+          <div class="inline">
+            <div class="f"><label for="upsRoomL" data-i18n="Length">Length</label><input type="number" id="upsRoomL" data-save inputmode="decimal" min="0" step="any"></div>
+            <div class="f"><label for="upsRoomB" data-i18n="Breadth">Breadth</label><input type="number" id="upsRoomB" data-save inputmode="decimal" min="0" step="any"></div>
+            <div class="f"><label for="upsRoomH" data-i18n="Height">Height</label><input type="number" id="upsRoomH" data-save inputmode="decimal" min="0" step="any"></div>
+            <div class="f unit"><label for="upsRoomUnit" data-i18n="Unit">Unit</label>
+              <select id="upsRoomUnit" data-save><option data-i18n="Feet">Feet</option><option data-i18n="Inch">Inch</option><option data-i18n="mm">mm</option><option data-i18n="cm">cm</option></select>
+            </div>
+          </div>
+
+          <h3 data-i18n="UPS room door dimension">UPS room door dimension</h3>
+          <div class="inline">
+            <div class="f"><label for="upsDoorH" data-i18n="Height">Height</label><input type="number" id="upsDoorH" data-save inputmode="decimal" min="0" step="any"></div>
+            <div class="f"><label for="upsDoorW" data-i18n="Width">Width</label><input type="number" id="upsDoorW" data-save inputmode="decimal" min="0" step="any"></div>
+            <div class="f unit"><label for="upsDoorUnit" data-i18n="Unit">Unit</label>
+              <select id="upsDoorUnit" data-save><option data-i18n="Feet">Feet</option><option data-i18n="Inch">Inch</option><option data-i18n="mm">mm</option><option data-i18n="cm">cm</option></select>
+            </div>
+          </div>
+
+          <h3 data-i18n="Lift">Lift</h3>
+          <div class="f">
+            <span class="lab req" data-i18n="Lift available for UPS and battery lifting">Lift available for UPS and battery lifting</span>
+            <div class="opts stack" id="liftAvailable">
+              <label class="opt"><input type="radio" name="liftAvailable" value="Yes"><span data-i18n="Yes">Yes</span></label>
+              <label class="opt"><input type="radio" name="liftAvailable" value="No"><span data-i18n="No">No</span></label>
+              <label class="opt"><input type="radio" name="liftAvailable" value="Not Required as Location at Ground Floor"><span data-i18n="Not required — location at ground floor">Not required — location at ground floor</span></label>
+            </div>
+            <div class="err" id="err-liftAvailable" data-i18n="Answer whether a lift is available.">Answer whether a lift is available.</div>
+          </div>
+          <div id="liftDoorWrap" style="display:none">
+            <div class="inline" style="margin-top:9px">
+              <div class="f"><label for="liftDoorH" data-i18n="Lift door height">Lift door height</label><input type="number" id="liftDoorH" data-save inputmode="decimal" min="0" step="any"></div>
+              <div class="f"><label for="liftDoorW" data-i18n="Lift door width">Lift door width</label><input type="number" id="liftDoorW" data-save inputmode="decimal" min="0" step="any"></div>
+              <div class="f unit"><label for="liftDoorUnit" data-i18n="Unit">Unit</label>
+                <select id="liftDoorUnit" data-save><option data-i18n="Feet">Feet</option><option data-i18n="Inch">Inch</option><option data-i18n="mm">mm</option><option data-i18n="cm">cm</option></select>
+              </div>
+            </div>
+          </div>
+
+          <h3 data-i18n="Staircase">Staircase</h3>
+          <div class="f">
+            <span class="lab req" data-i18n="Staircase available">Staircase available</span>
+            <div class="opts" id="stairAvailable">
+              <label class="opt"><input type="radio" name="stairAvailable" value="Yes"><span data-i18n="Yes">Yes</span></label>
+              <label class="opt"><input type="radio" name="stairAvailable" value="No"><span data-i18n="No">No</span></label>
+            </div>
+            <div class="err" id="err-stairAvailable" data-i18n="Answer whether a staircase is available.">Answer whether a staircase is available.</div>
+          </div>
+          <div class="f" style="margin-top:11px">
+            <span class="lab req" data-i18n="Is the staircase space feasible to carry the UPS into the UPS room">Is the staircase space feasible to carry the UPS into the UPS room</span>
+            <div class="opts" id="stairFeasible">
+              <label class="opt"><input type="radio" name="stairFeasible" value="Yes"><span data-i18n="Yes">Yes</span></label>
+              <label class="opt"><input type="radio" name="stairFeasible" value="No"><span data-i18n="No">No</span></label>
+              <label class="opt"><input type="radio" name="stairFeasible" value="Not Applicable"><span data-i18n="Not applicable">Not applicable</span></label>
+            </div>
+            <div class="err" id="err-stairFeasible" data-i18n="Answer the staircase feasibility question.">Answer the staircase feasibility question.</div>
+          </div>
+
+          <h3 data-i18n="Crane requirement">Crane requirement</h3>
+          <div class="f">
+            <span class="lab req" data-i18n="Crane required for UPS unloading">Crane required for UPS unloading</span>
+            <div class="opts" id="craneUnloading">
+              <label class="opt"><input type="radio" name="craneUnloading" value="Yes"><span data-i18n="Yes">Yes</span></label>
+              <label class="opt"><input type="radio" name="craneUnloading" value="No"><span data-i18n="No">No</span></label>
+            </div>
+            <div class="err" id="err-craneUnloading" data-i18n="Answer whether a crane is required for unloading.">Answer whether a crane is required for unloading.</div>
+          </div>
+          <div class="f" style="margin-top:11px">
+            <span class="lab req" data-i18n="Crane required for UPS loading at centre">Crane required for UPS loading at centre</span>
+            <div class="opts" id="craneLoading">
+              <label class="opt"><input type="radio" name="craneLoading" value="Yes"><span data-i18n="Yes">Yes</span></label>
+              <label class="opt"><input type="radio" name="craneLoading" value="No"><span data-i18n="No">No</span></label>
+            </div>
+            <div class="err" id="err-craneLoading" data-i18n="Answer whether a crane is required for loading at the centre.">Answer whether a crane is required for loading at the centre.</div>
+          </div>
+
+          <h3 data-i18n="UPS room condition">UPS room condition</h3>
+          <div class="f">
+            <span class="lab req" data-i18n="Ventilation condition at UPS room">Ventilation condition at UPS room</span>
+            <div class="opts" id="ventilation">
+              <label class="opt"><input type="radio" name="ventilation" value="Good"><span data-i18n="Good">Good</span></label>
+              <label class="opt"><input type="radio" name="ventilation" value="Average"><span data-i18n="Average">Average</span></label>
+              <label class="opt"><input type="radio" name="ventilation" value="Poor"><span data-i18n="Poor">Poor</span></label>
+            </div>
+            <div class="err" id="err-ventilation" data-i18n="Select the ventilation condition.">Select the ventilation condition.</div>
+          </div>
+          <div class="f" style="margin-top:11px">
+            <span class="lab req" data-i18n="AC availability at UPS room">AC availability at UPS room</span>
+            <div class="opts" id="acAvailable">
+              <label class="opt"><input type="radio" name="acAvailable" value="Available"><span data-i18n="Available">Available</span></label>
+              <label class="opt"><input type="radio" name="acAvailable" value="Not Available"><span data-i18n="Not available">Not available</span></label>
+            </div>
+            <div class="err" id="err-acAvailable" data-i18n="Answer the AC availability question.">Answer the AC availability question.</div>
+          </div>
+          <div class="f" style="margin-top:11px">
+            <span class="lab req" data-i18n="Water leakage observed at UPS room">Water leakage observed at UPS room</span>
+            <div class="opts" id="waterLeakage">
+              <label class="opt"><input type="radio" name="waterLeakage" value="Yes"><span data-i18n="Yes">Yes</span></label>
+              <label class="opt"><input type="radio" name="waterLeakage" value="No"><span data-i18n="No">No</span></label>
+            </div>
+            <div class="err" id="err-waterLeakage" data-i18n="Answer the water leakage question.">Answer the water leakage question.</div>
+          </div>
+          <div class="f" style="margin-top:11px">
+            <span class="lab req" data-i18n="Fire extinguisher available at UPS room">Fire extinguisher available at UPS room</span>
+            <div class="opts" id="fireExtinguisher">
+              <label class="opt"><input type="radio" name="fireExtinguisher" value="Yes"><span data-i18n="Yes">Yes</span></label>
+              <label class="opt"><input type="radio" name="fireExtinguisher" value="No"><span data-i18n="No">No</span></label>
+            </div>
+            <div class="err" id="err-fireExtinguisher" data-i18n="Answer the fire extinguisher question.">Answer the fire extinguisher question.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="Space and safety photographs">Space and safety photographs</h2>
+        <div class="cbody">
+          <div class="photos" data-photo="safety" data-label="Space and safety check for lithium battery"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ POWER ============ -->
+    <section class="sec" id="sec-power" data-sec="power">
+      <div class="card">
+        <h2 data-i18n="Power input">Power input</h2>
+        <div class="cbody">
+          <p class="hint" data-i18n="Recorded only where the site condition is &quot;Interior ready with electrical work&quot;.">Recorded only where the site condition is "Interior ready with electrical work".</p>
+
+          <h3 data-i18n="EB input voltage">EB input voltage</h3>
+          <div class="grid three">
+            <div class="f phase-r"><label for="voltR" class="req" data-i18n="R phase voltage (V)">R phase voltage (V)</label><input type="number" id="voltR" data-save inputmode="decimal" min="0" step="any"><div class="err" id="err-voltR" data-i18n="Enter the R phase voltage.">Enter the R phase voltage.</div></div>
+            <div class="f phase-y"><label for="voltY" class="req" data-i18n="Y phase voltage (V)">Y phase voltage (V)</label><input type="number" id="voltY" data-save inputmode="decimal" min="0" step="any"><div class="err" id="err-voltY" data-i18n="Enter the Y phase voltage.">Enter the Y phase voltage.</div></div>
+            <div class="f phase-b"><label for="voltB" class="req" data-i18n="B phase voltage (V)">B phase voltage (V)</label><input type="number" id="voltB" data-save inputmode="decimal" min="0" step="any"><div class="err" id="err-voltB" data-i18n="Enter the B phase voltage.">Enter the B phase voltage.</div></div>
+          </div>
+
+          <h3 data-i18n="Load per phase">Load per phase</h3>
+          <div class="grid three">
+            <div class="f phase-r"><label for="load1" data-i18n="Load on 1st phase (A)">Load on 1st phase (A)</label><input type="number" id="load1" data-save inputmode="decimal" min="0" step="any"></div>
+            <div class="f phase-y"><label for="load2" data-i18n="Load on 2nd phase (A)">Load on 2nd phase (A)</label><input type="number" id="load2" data-save inputmode="decimal" min="0" step="any"></div>
+            <div class="f phase-b"><label for="load3" data-i18n="Load on 3rd phase (A)">Load on 3rd phase (A)</label><input type="number" id="load3" data-save inputmode="decimal" min="0" step="any"></div>
+          </div>
+
+          <h3 data-i18n="Earthing">Earthing</h3>
+          <div class="f">
+            <span class="lab req" data-i18n="Earthing available">Earthing available</span>
+            <div class="opts" id="earthAvailable">
+              <label class="opt"><input type="radio" name="earthAvailable" value="Yes"><span data-i18n="Yes">Yes</span></label>
+              <label class="opt"><input type="radio" name="earthAvailable" value="No"><span data-i18n="No">No</span></label>
+            </div>
+            <div class="err" id="err-earthAvailable" data-i18n="Answer whether earthing is available.">Answer whether earthing is available.</div>
+          </div>
+          <div class="f phase-e" style="margin-top:11px">
+            <label for="earthVoltage" data-i18n="Earthing voltage (V)">Earthing voltage (V)</label>
+            <input type="number" id="earthVoltage" data-save inputmode="decimal" min="0" step="any">
+            <p class="hint" id="earthNote" style="display:none;margin-top:7px" data-i18n="Earthing is not available at this site, so the earthing voltage stays not applicable. This is flagged under site issues.">Earthing is not available at this site, so the earthing voltage stays not applicable. This is flagged under site issues.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ WIRE & MCCB ============ -->
+    <section class="sec" id="sec-wire" data-sec="wire">
+      <div class="card">
+        <h2 data-i18n="Wire and MCCB found at site">Wire and MCCB found at site</h2>
+        <div class="cbody">
+
+          <h3 data-i18n="Input cable">Input cable</h3>
+          <div class="f">
+            <span class="lab req" data-i18n="Input cable availability">Input cable availability</span>
+            <div class="opts stack" id="inCableAvail">
+              <label class="opt"><input type="radio" name="inCableAvail" value="Yes"><span data-i18n="Yes">Yes</span></label>
+              <label class="opt"><input type="radio" name="inCableAvail" value="No"><span data-i18n="No">No</span></label>
+              <label class="opt"><input type="radio" name="inCableAvail" value="Electrical Work Not Completed"><span data-i18n="Electrical work not completed">Electrical work not completed</span></label>
+            </div>
+            <div class="err" id="err-inCableAvail" data-i18n="Answer the input cable availability.">Answer the input cable availability.</div>
+          </div>
+          <div class="f" style="margin-top:9px"><label for="inCableSize" data-i18n="Input cable size (Sq mm)">Input cable size (Sq mm)</label><input type="number" id="inCableSize" data-save inputmode="decimal" min="0" step="any"></div>
+
+          <h3 data-i18n="Output cable">Output cable</h3>
+          <div class="f">
+            <span class="lab req" data-i18n="Output cable availability">Output cable availability</span>
+            <div class="opts stack" id="outCableAvail">
+              <label class="opt"><input type="radio" name="outCableAvail" value="Yes"><span data-i18n="Yes">Yes</span></label>
+              <label class="opt"><input type="radio" name="outCableAvail" value="No"><span data-i18n="No">No</span></label>
+              <label class="opt"><input type="radio" name="outCableAvail" value="Electrical Work Not Completed"><span data-i18n="Electrical work not completed">Electrical work not completed</span></label>
+            </div>
+            <div class="err" id="err-outCableAvail" data-i18n="Answer the output cable availability.">Answer the output cable availability.</div>
+          </div>
+          <div class="f" style="margin-top:9px"><label for="outCableSize" data-i18n="Output cable size (Sq mm)">Output cable size (Sq mm)</label><input type="number" id="outCableSize" data-save inputmode="decimal" min="0" step="any"></div>
+
+          <h3 data-i18n="Earthing cable">Earthing cable</h3>
+          <div class="f">
+            <span class="lab req" data-i18n="Earthing cable availability">Earthing cable availability</span>
+            <div class="opts stack" id="earthCableAvail">
+              <label class="opt"><input type="radio" name="earthCableAvail" value="Yes"><span data-i18n="Yes">Yes</span></label>
+              <label class="opt"><input type="radio" name="earthCableAvail" value="No"><span data-i18n="No">No</span></label>
+              <label class="opt"><input type="radio" name="earthCableAvail" value="Electrical Work Not Completed"><span data-i18n="Electrical work not completed">Electrical work not completed</span></label>
+            </div>
+            <div class="err" id="err-earthCableAvail" data-i18n="Answer the earthing cable availability.">Answer the earthing cable availability.</div>
+          </div>
+          <div class="f" style="margin-top:9px"><label for="earthCableSize" data-i18n="Earthing cable size (Sq mm)">Earthing cable size (Sq mm)</label><input type="number" id="earthCableSize" data-save inputmode="decimal" min="0" step="any"></div>
+
+          <h3 data-i18n="Input MCCB">Input MCCB</h3>
+          <div class="f">
+            <span class="lab req" data-i18n="Input MCCB availability">Input MCCB availability</span>
+            <div class="opts stack" id="inMccbAvail">
+              <label class="opt"><input type="radio" name="inMccbAvail" value="Yes"><span data-i18n="Yes">Yes</span></label>
+              <label class="opt"><input type="radio" name="inMccbAvail" value="No"><span data-i18n="No">No</span></label>
+              <label class="opt"><input type="radio" name="inMccbAvail" value="Electrical Work Not Completed"><span data-i18n="Electrical work not completed">Electrical work not completed</span></label>
+            </div>
+            <div class="err" id="err-inMccbAvail" data-i18n="Answer the input MCCB availability.">Answer the input MCCB availability.</div>
+          </div>
+          <div class="grid two" style="margin-top:9px">
+            <div class="f"><label for="inMccbRating" data-i18n="Input MCCB rating (A)">Input MCCB rating (A)</label><input type="number" id="inMccbRating" data-save inputmode="decimal" min="0" step="any"></div>
+            <div class="f"><span class="lab" data-i18n="Input MCCB type">Input MCCB type</span>
+              <div class="opts" id="inMccbType">
+                <label class="opt"><input type="radio" name="inMccbType" value="Single Pole"><span data-i18n="Single pole">Single pole</span></label>
+                <label class="opt"><input type="radio" name="inMccbType" value="Three Pole"><span data-i18n="Three pole">Three pole</span></label>
+              </div>
+            </div>
+          </div>
+
+          <h3 data-i18n="Output MCCB">Output MCCB</h3>
+          <div class="f">
+            <span class="lab req" data-i18n="Output MCCB availability">Output MCCB availability</span>
+            <div class="opts stack" id="outMccbAvail">
+              <label class="opt"><input type="radio" name="outMccbAvail" value="Yes"><span data-i18n="Yes">Yes</span></label>
+              <label class="opt"><input type="radio" name="outMccbAvail" value="No"><span data-i18n="No">No</span></label>
+              <label class="opt"><input type="radio" name="outMccbAvail" value="Electrical Work Not Completed"><span data-i18n="Electrical work not completed">Electrical work not completed</span></label>
+            </div>
+            <div class="err" id="err-outMccbAvail" data-i18n="Answer the output MCCB availability.">Answer the output MCCB availability.</div>
+          </div>
+          <div class="grid two" style="margin-top:9px">
+            <div class="f"><label for="outMccbRating" data-i18n="Output MCCB rating (A)">Output MCCB rating (A)</label><input type="number" id="outMccbRating" data-save inputmode="decimal" min="0" step="any"></div>
+            <div class="f"><span class="lab" data-i18n="Output MCCB type">Output MCCB type</span>
+              <div class="opts" id="outMccbType">
+                <label class="opt"><input type="radio" name="outMccbType" value="Single Pole"><span data-i18n="Single pole">Single pole</span></label>
+                <label class="opt"><input type="radio" name="outMccbType" value="Three Pole"><span data-i18n="Three pole">Three pole</span></label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="Engineering recommendation">Engineering recommendation</h2>
+        <div class="cbody">
+          <p class="hint" data-i18n="Matched automatically from the UPS capacity in the Site Master against the Line Diagram master. Read-only.">Matched automatically from the UPS capacity in the Site Master against the Line Diagram master. Read-only.</p>
+          <div id="recoBox"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="Actual against recommended">Actual against recommended</h2>
+        <div class="cbody">
+          <div class="twrap"><table id="cmpTable">
+            <thead><tr><th style="min-width:118px" data-i18n="Item">Item</th><th data-i18n="Actual site condition">Actual site condition</th><th data-i18n="Recommended">Recommended</th><th style="min-width:140px" data-i18n="Status">Status</th></tr></thead>
+            <tbody id="cmpBody"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="Wire and MCCB photographs">Wire and MCCB photographs</h2>
+        <div class="cbody">
+          <div class="photos" data-photo="wire" data-label="Wire and MCCB found at site"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ LOAD ============ -->
+    <section class="sec" id="sec-load" data-sec="load">
+      <div class="card">
+        <h2 data-i18n="Total load calculation — Aadhaar centre">Total load calculation — Aadhaar centre</h2>
+        <div class="cbody">
+          <p class="hint" data-i18n="Enter the count of each item at the centre and how many are connected to the UPS. Watts are pre-filled from the standard list and can be corrected on site. Shaded figures calculate automatically.">Enter the count of each item at the centre and how many are connected to the UPS. Watts are pre-filled from the standard list and can be corrected on site. Shaded figures calculate automatically.</p>
+
+          <label class="opt" style="margin-bottom:13px">
+            <input type="checkbox" id="loadNotAvailable">
+            <span data-i18n="Details are not available at this centre">Details are not available at this centre</span>
+          </label>
+          <div class="err" id="err-load" data-i18n="Check the highlighted rows. Counts cannot be negative, and units on UPS cannot exceed the count.">Check the highlighted rows. Counts cannot be negative, and units on UPS cannot exceed the count.</div>
+
+          <div id="loadWrap">
+            <div class="twrap loadwrap">
+              <table id="loadTable">
+                <thead>
+                  <tr>
+                    <th style="min-width:210px" data-i18n="Electrical equipment">Electrical equipment</th>
+                    <th style="width:80px" data-i18n="Count">Count</th>
+                    <th style="width:104px" data-i18n="Watts">Watts</th>
+                    <th style="width:104px" data-i18n="Count on UPS">Count on UPS</th>
+                    <th style="width:100px" data-i18n="Load (W)">Load (W)</th>
+                    <th style="width:112px" data-i18n="Load on UPS (W)">Load on UPS (W)</th>
+                    <th style="width:78px" data-i18n="Critical">Critical</th>
+                    <th style="min-width:120px" data-i18n="Remarks">Remarks</th>
+                  </tr>
+                </thead>
+                <tbody id="loadBody"></tbody>
+                <tfoot>
+                  <tr>
+                    <td colspan="4">Total load (W)</td>
+                    <td class="calc" id="sumLoadW">0</td>
+                    <td class="calc" id="sumUpsW">0</td>
+                    <td colspan="2"></td>
+                  </tr>
+                  <tr>
+                    <td colspan="4">Total load (kW)</td>
+                    <td class="calc" id="sumLoadKW">0.000</td>
+                    <td class="calc" id="sumUpsKW">0.000</td>
+                    <td colspan="2"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <div class="totals">
+              <div><span data-i18n="Total connected load">Total connected load</span><strong class="num" id="tileLoad">0 W · 0.000 kW</strong></div>
+              <div><span data-i18n="Total load on UPS">Total load on UPS</span><strong class="num" id="tileUps">0 W · 0.000 kW</strong></div>
+              <div><span data-i18n="Critical load on UPS">Critical load on UPS</span><strong class="num" id="tileCrit">0 W · 0.000 kW</strong></div>
+              <div><span data-i18n="UPS capacity at site">UPS capacity at site</span><strong class="num" id="tileCap">—</strong></div>
+            </div>
+          </div>
+
+          <div id="loadNAnote" class="err show" style="display:none;background:var(--amber-bg);border-color:var(--amber-line);color:var(--amber)" data-i18n="Load details are marked not available. The report will record this instead of a load table.">
+            Load details are marked not available. The report will record this instead of a load table.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ REVIEW ============ -->
+    <section class="sec" id="sec-review" data-sec="review">
+      <div class="card">
+        <h2 data-i18n="Survey completion">Survey completion</h2>
+        <div class="cbody">
+          <div class="bigpct"><strong class="num" id="pctBig">0%</strong><span data-i18n="complete">complete</span></div>
+          <ul class="track" id="tracker"></ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="Photographs">Photographs</h2>
+        <div class="cbody"><ul class="track" id="photoSummary"></ul></div>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="Site issues and attention required">Site issues and attention required</h2>
+        <div class="cbody">
+          <p class="hint" data-i18n="Observations raised from the answers recorded above. They are flags for the office, not a safety clearance.">Observations raised from the answers recorded above. They are flags for the office, not a safety clearance.</p>
+          <ul class="issues" id="issueList"></ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 data-i18n="Remarks">Remarks</h2>
+        <div class="cbody">
+          <div class="f"><label for="remarkEngineer" data-i18n="Engineer observations / site remarks">Engineer observations / site remarks</label>
+            <textarea id="remarkEngineer" data-save placeholder="What the office needs to know about this site." data-i18n-ph="What the office needs to know about this site."></textarea></div>
+          <div class="f" style="margin-top:13px"><label for="remarkCustomer" data-i18n="Customer / site representative remarks">Customer / site representative remarks</label>
+            <textarea id="remarkCustomer" data-save placeholder="Recorded as stated by the site representative." data-i18n-ph="Recorded as stated by the site representative."></textarea></div>
+        </div>
+      </div>
+
+      <div class="card" id="submittedCard" style="display:none">
+        <h2 data-i18n="Submitted">Submitted</h2>
+        <div class="cbody">
+          <div class="done-screen">
+            <div class="big">✓</div>
+            <h4 data-i18n="Site survey submitted successfully">Site survey submitted successfully</h4>
+            <p class="hint" data-i18n="Keep this Survey ID for reference.">Keep this Survey ID for reference.</p>
+            <div class="sid" id="doneSurveyId">—</div>
+            <div class="mbtns">
+              <button type="button" class="prim" id="btnViewReport" data-i18n="View survey report">View survey report</button>
+              <button type="button" id="btnExportDone" data-i18n="Export data (CSV)">Export data (CSV)</button>
+              <button type="button" id="btnNewSurvey2" data-i18n="Start new survey">Start new survey</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    </div>
+
+    <div id="minePanel" style="display:none">
+      <div class="card">
+        <h2 data-i18n="Surveys completed">Surveys completed</h2>
+        <div class="cbody">
+          <div class="minehead">
+            <span class="big" id="mineBig">0</span>
+            <span class="lab" data-i18n="submitted from this device">submitted from this device</span>
+          </div>
+          <p class="hint" data-i18n="Open any survey to see its details, print it or export the data. Surveys stay on this device until the backend is connected.">Open any survey to see its details, print it or export the data. Surveys stay on this device until the backend is connected.</p>
+          <p class="hint" id="syncLine" style="display:none;margin:0 0 10px"></p>
+          <div class="pbtns" style="margin-top:6px">
+            <button type="button" class="pbtn" id="btnSyncNow" style="display:none"></button>
+            <button type="button" class="pbtn alt" id="btnMineExportAll" data-i18n="Export all surveys">Export all surveys</button>
+          </div>
+        </div>
+      </div>
+      <div id="mineList"></div>
+    </div>
+  </main>
+
+  <div class="bottomnav">
+    <button type="button" id="btnPrev" data-i18n="← Previous">← Previous</button>
+    <button type="button" id="btnSaveDraft" data-i18n="Save draft">Save draft</button>
+    <button type="button" id="btnNext" class="prim" data-i18n="Next →">Next →</button>
+    <button type="button" id="btnSubmit" class="submit" style="display:none" data-i18n="Submit survey">Submit survey</button>
+  </div>
+</div>
+
+<div id="reportView">
+  <div class="rtoolbar">
+    <button type="button" id="btnBackToSurvey" data-i18n="← Back">← Back</button>
+    <button type="button" id="btnPrint" class="prim" data-i18n="Print">Print</button>
+    <button type="button" id="btnPdf" data-i18n="Save as PDF">Save as PDF</button>
+    <button type="button" id="btnExportCsv" data-i18n="Export CSV">Export CSV</button>
+    <button type="button" id="btnExportJson" data-i18n="Export JSON">Export JSON</button>
+    <button type="button" id="btnExportAll" style="display:none" data-i18n="Export all surveys">Export all surveys</button>
+    <button type="button" id="btnNewSurvey" data-i18n="New survey">New survey</button>
+  </div>
+  <div class="rtabs" id="reportTabs">
+    <button type="button" data-tab="survey" aria-selected="true" data-i18n="Site Survey Report">Site Survey Report</button>
+    <button type="button" data-tab="load" aria-selected="false" data-i18n="Load Calculation Report">Load Calculation Report</button>
+  </div>
+  <div class="report" id="reportBody"></div>
+  <div class="report hidden" id="reportLoad"></div>
+</div>
+
+<div class="modal" id="draftModal"><div class="box">
+  <div class="mhead"><h3 data-i18n="Draft survey found">Draft survey found</h3></div>
+  <div class="mbody">
+    <p class="hint" id="draftInfo"></p>
+    <div class="mbtns">
+      <button type="button" class="prim" id="btnResume" data-i18n="Resume draft">Resume draft</button>
+      <button type="button" id="btnStartNew" data-i18n="Start new survey">Start new survey</button>
+      <button type="button" class="danger" id="btnDeleteDraft" data-i18n="Delete draft">Delete draft</button>
+    </div>
+  </div>
+</div></div>
+
+<div class="modal" id="confirmModal"><div class="box">
+  <div class="mhead"><h3 data-i18n="Confirm survey submission">Confirm survey submission</h3></div>
+  <div class="mbody">
+    <p class="hint" data-i18n="Check the summary before submitting. Once submitted the survey is locked.">Check the summary before submitting. Once submitted the survey is locked.</p>
+    <div class="sum" id="confirmSum"></div>
+    <div class="mbtns">
+      <button type="button" id="btnCancelSubmit" data-i18n="Cancel">Cancel</button>
+      <button type="button" class="ok" id="btnConfirmSubmit" data-i18n="Submit survey">Submit survey</button>
+    </div>
+  </div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="filePick" accept="image/*" multiple hidden>
+<input type="file" id="fileCam" accept="image/*" capture="environment" multiple hidden>
+
+<script src="data/app-config.js"></script>
+<script src="data/brand-assets.js"></script>
+<script src="data/i18n-hi.js"></script>
+<script src="data/user-master.js"></script>
+<script src="data/load-master.js"></script>
+<script src="data/site-list.js"></script>
+<script src="data/line-diagram.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
