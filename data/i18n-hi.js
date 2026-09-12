@@ -423,5 +423,20 @@ const I18N = { hi: {
 "surveys loaded from SharePoint.": "सर्वे SharePoint से लोड हुए।",
 "Could not reach SharePoint.": "SharePoint तक नहीं पहुँच सके।",
 "No SharePoint list flow is configured on this build.": "इस बिल्ड में SharePoint लिस्ट फ्लो कॉन्फ़िगर नहीं है।",
-"From SharePoint — open or export only.": "SharePoint से — केवल खोलें या एक्सपोर्ट करें।"
+"From SharePoint — open or export only.": "SharePoint से — केवल खोलें या एक्सपोर्ट करें।",
+"Diagnostics": "डायग्नोस्टिक्स",
+"If a survey is missing, this tells you where it stopped.": "यदि कोई सर्वे नहीं दिख रहा, तो यहाँ पता चलेगा कि वह कहाँ रुका।",
+"App version": "ऐप संस्करण",
+"Signed in as": "साइन इन",
+"Surveys stored on this device": "इस डिवाइस पर सहेजे गए सर्वे",
+"Shown in this list": "इस सूची में दिख रहे",
+"Device storage used": "डिवाइस स्टोरेज उपयोग",
+"Submit flow": "सबमिट फ्लो",
+"List flow": "लिस्ट फ्लो",
+"configured": "कॉन्फ़िगर है",
+"not configured — device only": "कॉन्फ़िगर नहीं — केवल डिवाइस",
+"Last storage error": "अंतिम स्टोरेज त्रुटि",
+"Last send error": "अंतिम भेजने की त्रुटि",
+"Clear cached app and reload": "कैश्ड ऐप हटाकर फिर से लोड करें",
+"This device is out of storage. The survey could not be saved.": "इस डिवाइस में जगह नहीं बची। सर्वे सहेजा नहीं जा सका।"
 } };

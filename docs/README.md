@@ -9,7 +9,8 @@ Files in this folder:
 | File | What it is |
 |---|---|
 | `flow-request-schema.json` | Paste into the flow's **Parse JSON** action |
-| `flow-definition.json` | The whole flow, for reference or for pasting via Peek code |
+| `flow-1-submit.json` | Flow 1 — receives a survey and writes it to SharePoint |
+| `flow-2-list.json` | Flow 2 — reads every survey back for admin sign-ins |
 | `sharepoint-columns.md` | Every list and column to create |
 | `sample-payload.json` | One real submission, for testing the flow |
 
@@ -105,8 +106,7 @@ and so on, plus `lastEditedAt`. So the flow must update rather than insert:
    `SurveyId eq '<surveyId>'` and delete them, so a revision replaces the old rows
    instead of adding a second set.
 
-`flow-definition.json` already has this shape — `Find_existing_survey`,
-`Create_or_update_survey` and `Delete_old_load_lines`.
+`flow-1-submit.json` has this shape already.
 
 This also removes the duplicate risk from a retried post: a survey that already
 reached SharePoint is updated in place, not written twice.
@@ -239,3 +239,64 @@ Each survey produces:
 From there, Power BI over `SiteSurveys` gives you site readiness by branch, zone
 or state, and the issue counts tell the office which centres need the electrical
 contractor before delivery.
+
+
+---
+
+## 7. Nothing appears in "My surveys" or the admin view
+
+Open **My surveys → Diagnostics** on the phone that did the survey. It answers
+this in one screen, and each line points at a different cause.
+
+| Diagnostics says | What it means | Fix |
+|---|---|---|
+| *Surveys stored on this device* is 0 | The survey never reached the phone's storage | Check *Last storage error*. If it mentions quota, clear old surveys or let photographs go |
+| Stored is 1 but *Shown in this list* is 0 | The list is filtering them out | You are signed in as a different engineer than the one who did the survey |
+| *App version* is older than the build you pushed | The phone is running a cached copy | Press **Clear cached app and reload** |
+| *Last send error* has text | The flow rejected the post | The message is the flow's own reply — read it below |
+| *Submit flow* says not configured | `flowUrl` is still empty in `data/app-config.js` | Paste the trigger URL and push |
+
+A survey is written to the phone **before** it is posted, so a broken flow can
+never make it vanish from *My surveys*. If the list is empty on the phone that
+did the survey, the cause is on the device, not in Power Automate. If the list
+shows the survey as *Waiting to send*, the cause is the flow.
+
+### Flow errors you are likely to see
+
+**`InvalidTemplate — Unable to process template language expressions`**
+Something references an action it cannot see. The usual cause is a *Response*
+action referring to *Create item* when *Create item* sits inside a Condition —
+Logic Apps cannot reach into a branch. `flow-1-submit.json` avoids this by
+reading the item back with `Read_back_survey_item` after the condition and
+taking the ID from there.
+
+**The flow succeeds but SharePoint is empty.**
+Check *Create item* actually ran, not the *Update item* branch against a stale
+match. `Find_existing_survey` filters `Title eq '<surveyId>'`; if `Title` is not
+the Survey ID, every submission looks like an update of nothing.
+
+**The admin view stays empty while the list has rows.**
+Three things to check, in this order:
+
+1. `listUrl` is filled in `data/app-config.js`. Without it the button does not
+   even appear.
+2. Flow 2's *Response* carries the header `Access-Control-Allow-Origin: *`.
+   Without it the post reaches SharePoint, the reply comes back, and the browser
+   silently refuses to let the page read it.
+3. The *Select* step maps `RawPayload`. The app rebuilds the whole report from
+   that column; if it is empty, the rows come back with nothing in them.
+
+Test flow 2 by pasting its URL straight into a browser tab. You should see a
+JSON array of `RawPayload` strings. If you see the array there but not in the
+app, it is the CORS header.
+
+### Checking the trigger by hand
+
+```bash
+curl -i -X POST "<flow 1 URL>" \
+  -H "Content-Type: text/plain" \
+  --data-binary @sample-payload.json
+```
+
+A working flow replies `200` with `{"ok":true,...}`. Anything else is the flow,
+and the body tells you which action failed.

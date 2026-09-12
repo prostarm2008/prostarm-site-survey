@@ -1,0 +1,867 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "$connections": {
+        "defaultValue": {},
+        "type": "Object"
+      }
+    },
+    "triggers": {
+      "manual": {
+        "type": "Request",
+        "kind": "Http",
+        "inputs": {
+          "method": "POST"
+        },
+        "description": "Leave the schema box empty. The app posts text/plain to avoid a CORS preflight, so the body is parsed in the next action."
+      }
+    },
+    "actions": {
+      "Parse_survey": {
+        "type": "ParseJson",
+        "runAfter": {},
+        "inputs": {
+          "content": "@json(string(triggerBody()))",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "surveyId": {
+                "type": "string"
+              },
+              "surveyDate": {
+                "type": "string"
+              },
+              "startedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "submittedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "engineerName": {
+                "type": "string"
+              },
+              "engineerId": {
+                "type": "string"
+              },
+              "submittedBy": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string"
+                  },
+                  "designation": {
+                    "type": "string"
+                  },
+                  "branch": {
+                    "type": "string"
+                  },
+                  "zone": {
+                    "type": "string"
+                  },
+                  "managerCode": {
+                    "type": "string"
+                  },
+                  "managerName": {
+                    "type": "string"
+                  }
+                }
+              },
+              "gps": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "lat": {
+                    "type": "number"
+                  },
+                  "lng": {
+                    "type": "number"
+                  },
+                  "accuracy": {
+                    "type": "number"
+                  },
+                  "ts": {
+                    "type": "string"
+                  }
+                }
+              },
+              "site": {
+                "type": "object",
+                "properties": {
+                  "siteCode": {
+                    "type": "string"
+                  },
+                  "siteName": {
+                    "type": "string"
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "district": {
+                    "type": "string"
+                  },
+                  "state": {
+                    "type": "string"
+                  },
+                  "branch": {
+                    "type": "string"
+                  },
+                  "zone": {
+                    "type": "string"
+                  },
+                  "contactDetails": {
+                    "type": "string"
+                  },
+                  "regionalOffice": {
+                    "type": "string"
+                  },
+                  "upsCapacity": {
+                    "type": "string"
+                  },
+                  "siteCondition": {
+                    "type": "string"
+                  }
+                }
+              },
+              "loadDetailsAvailable": {
+                "type": "boolean"
+              },
+              "loadCalculation": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "i": {
+                      "type": "integer"
+                    },
+                    "item": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "watts": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "countOnUps": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "loadW": {
+                      "type": "number"
+                    },
+                    "loadOnUpsW": {
+                      "type": "number"
+                    },
+                    "critical": {
+                      "type": "string"
+                    },
+                    "remarks": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "loadTotals": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "totalLoadW": {
+                    "type": "number"
+                  },
+                  "totalLoadKW": {
+                    "type": "number"
+                  },
+                  "totalUpsLoadW": {
+                    "type": "number"
+                  },
+                  "totalUpsLoadKW": {
+                    "type": "number"
+                  },
+                  "criticalUpsLoadW": {
+                    "type": "number"
+                  },
+                  "criticalUpsLoadKW": {
+                    "type": "number"
+                  }
+                }
+              },
+              "spaceSafety": {
+                "type": "object",
+                "properties": {
+                  "branchFloor": {
+                    "type": "string"
+                  },
+                  "branchFloorOther": {
+                    "type": "string"
+                  },
+                  "mainDoor": {
+                    "type": "object",
+                    "properties": {
+                      "height": {
+                        "type": "string"
+                      },
+                      "width": {
+                        "type": "string"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "upsRoom": {
+                    "type": "object",
+                    "properties": {
+                      "length": {
+                        "type": "string"
+                      },
+                      "breadth": {
+                        "type": "string"
+                      },
+                      "height": {
+                        "type": "string"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "upsRoomDoor": {
+                    "type": "object",
+                    "properties": {
+                      "height": {
+                        "type": "string"
+                      },
+                      "width": {
+                        "type": "string"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "liftAvailable": {
+                    "type": "string"
+                  },
+                  "liftDoor": {
+                    "type": "object",
+                    "properties": {
+                      "height": {
+                        "type": "string"
+                      },
+                      "width": {
+                        "type": "string"
+                      },
+                      "unit": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "stairAvailable": {
+                    "type": "string"
+                  },
+                  "stairFeasible": {
+                    "type": "string"
+                  },
+                  "craneForUnloading": {
+                    "type": "string"
+                  },
+                  "craneForLoadingAtCentre": {
+                    "type": "string"
+                  },
+                  "ventilation": {
+                    "type": "string"
+                  },
+                  "acAvailability": {
+                    "type": "string"
+                  },
+                  "waterLeakage": {
+                    "type": "string"
+                  },
+                  "fireExtinguisher": {
+                    "type": "string"
+                  }
+                }
+              },
+              "powerInputApplicable": {
+                "type": "boolean"
+              },
+              "powerInput": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "ebVoltage": {
+                    "type": "object",
+                    "properties": {
+                      "r": {
+                        "type": "string"
+                      },
+                      "y": {
+                        "type": "string"
+                      },
+                      "b": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "phaseLoadAmp": {
+                    "type": "object",
+                    "properties": {
+                      "phase1": {
+                        "type": "string"
+                      },
+                      "phase2": {
+                        "type": "string"
+                      },
+                      "phase3": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "earthingAvailable": {
+                    "type": "string"
+                  },
+                  "earthingVoltage": {
+                    "type": "string"
+                  }
+                }
+              },
+              "wireMccb": {
+                "type": "object",
+                "properties": {
+                  "inputCable": {
+                    "type": "object",
+                    "properties": {
+                      "availability": {
+                        "type": "string"
+                      },
+                      "sizeSqmm": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "outputCable": {
+                    "type": "object",
+                    "properties": {
+                      "availability": {
+                        "type": "string"
+                      },
+                      "sizeSqmm": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "earthingCable": {
+                    "type": "object",
+                    "properties": {
+                      "availability": {
+                        "type": "string"
+                      },
+                      "sizeSqmm": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "inputMccb": {
+                    "type": "object",
+                    "properties": {
+                      "availability": {
+                        "type": "string"
+                      },
+                      "ratingAmp": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "outputMccb": {
+                    "type": "object",
+                    "properties": {
+                      "availability": {
+                        "type": "string"
+                      },
+                      "ratingAmp": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              "recommendation": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "type": "string"
+                  },
+                  "matchedRequirement": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "inputWire": {
+                    "type": "string"
+                  },
+                  "inputMccb": {
+                    "type": "string"
+                  },
+                  "outputWire": {
+                    "type": "string"
+                  },
+                  "outputMccb": {
+                    "type": "string"
+                  },
+                  "earthingWire": {
+                    "type": "string"
+                  },
+                  "note": {
+                    "type": "string"
+                  }
+                }
+              },
+              "comparison": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "actual": {
+                      "type": "string"
+                    },
+                    "recommended": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "cls": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "issues": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "photos": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "section": {
+                      "type": "string"
+                    },
+                    "sectionLabel": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "timestamp": {
+                      "type": "string"
+                    },
+                    "caption": {
+                      "type": "string"
+                    },
+                    "dataUrl": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "remarks": {
+                "type": "object",
+                "properties": {
+                  "engineer": {
+                    "type": "string"
+                  },
+                  "customer": {
+                    "type": "string"
+                  }
+                }
+              },
+              "completionPct": {
+                "type": "integer"
+              },
+              "revision": {
+                "type": "integer"
+              },
+              "lastEditedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "surveyId",
+              "surveyDate",
+              "engineerId",
+              "site"
+            ]
+          }
+        }
+      },
+      "Find_existing_survey": {
+        "type": "OpenApiConnection",
+        "runAfter": {
+          "Parse_survey": [
+            "Succeeded"
+          ]
+        },
+        "inputs": {
+          "host": {
+            "connectionName": "shared_sharepointonline",
+            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+            "operationId": "GetItems"
+          },
+          "parameters": {
+            "dataset": "https://YOURTENANT.sharepoint.com/sites/YOURSITE",
+            "table": "SiteSurveys",
+            "$filter": "Title eq '@{body('Parse_survey')?['surveyId']}'",
+            "$top": 1
+          }
+        }
+      },
+      "Create_or_update_survey": {
+        "type": "If",
+        "runAfter": {
+          "Find_existing_survey": [
+            "Succeeded"
+          ]
+        },
+        "expression": {
+          "greater": [
+            "@length(body('Find_existing_survey')?['value'])",
+            0
+          ]
+        },
+        "actions": {
+          "Update_survey_item": {
+            "type": "OpenApiConnection",
+            "runAfter": {},
+            "inputs": {
+              "host": {
+                "connectionName": "shared_sharepointonline",
+                "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                "operationId": "PatchItem"
+              },
+              "parameters": {
+                "dataset": "https://YOURTENANT.sharepoint.com/sites/YOURSITE",
+                "table": "SiteSurveys",
+                "id": "@{first(body('Find_existing_survey')?['value'])?['ID']}",
+                "item/Title": "@{body('Parse_survey')?['surveyId']}",
+                "item/Revision": "@{coalesce(body('Parse_survey')?['revision'], 1)}",
+                "item/SurveyDate": "@{body('Parse_survey')?['surveyDate']}",
+                "item/StartedAt": "@{body('Parse_survey')?['startedAt']}",
+                "item/SubmittedAt": "@{body('Parse_survey')?['submittedAt']}",
+                "item/LastEditedAt": "@{body('Parse_survey')?['lastEditedAt']}",
+                "item/EngineerName": "@{body('Parse_survey')?['engineerName']}",
+                "item/EngineerCode": "@{body('Parse_survey')?['engineerId']}",
+                "item/Designation": "@{body('Parse_survey')?['submittedBy']?['designation']}",
+                "item/EngineerBranch": "@{body('Parse_survey')?['submittedBy']?['branch']}",
+                "item/EngineerZone": "@{body('Parse_survey')?['submittedBy']?['zone']}",
+                "item/SiteCode": "@{body('Parse_survey')?['site']?['siteCode']}",
+                "item/SiteName": "@{body('Parse_survey')?['site']?['siteName']}",
+                "item/District": "@{body('Parse_survey')?['site']?['district']}",
+                "item/StateName": "@{body('Parse_survey')?['site']?['state']}",
+                "item/SiteBranch": "@{body('Parse_survey')?['site']?['branch']}",
+                "item/SiteZone": "@{body('Parse_survey')?['site']?['zone']}",
+                "item/RegionalOffice": "@{body('Parse_survey')?['site']?['regionalOffice']}",
+                "item/UpsCapacity": "@{body('Parse_survey')?['site']?['upsCapacity']}",
+                "item/SiteCondition": "@{body('Parse_survey')?['site']?['siteCondition']}",
+                "item/GpsLatitude": "@{body('Parse_survey')?['gps']?['lat']}",
+                "item/GpsLongitude": "@{body('Parse_survey')?['gps']?['lng']}",
+                "item/LoadDetailsAvailable": "@{body('Parse_survey')?['loadDetailsAvailable']}",
+                "item/TotalLoadKW": "@{body('Parse_survey')?['loadTotals']?['totalLoadKW']}",
+                "item/TotalUpsLoadKW": "@{body('Parse_survey')?['loadTotals']?['totalUpsLoadKW']}",
+                "item/CriticalUpsLoadKW": "@{body('Parse_survey')?['loadTotals']?['criticalUpsLoadKW']}",
+                "item/IssueCount": "@{length(coalesce(body('Parse_survey')?['issues'], json('[]')))}",
+                "item/Issues": "@{join(coalesce(body('Parse_survey')?['issues'], json('[]')), ' | ')}",
+                "item/EngineerRemarks": "@{body('Parse_survey')?['remarks']?['engineer']}",
+                "item/CustomerRemarks": "@{body('Parse_survey')?['remarks']?['customer']}",
+                "item/CompletionPct": "@{body('Parse_survey')?['completionPct']}",
+                "item/PhotoCount": "@{length(coalesce(body('Parse_survey')?['photos'], json('[]')))}",
+                "item/RawPayload": "@{string(body('Parse_survey'))}"
+              }
+            }
+          }
+        },
+        "else": {
+          "actions": {
+            "Create_survey_item": {
+              "type": "OpenApiConnection",
+              "runAfter": {},
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "PostItem"
+                },
+                "parameters": {
+                  "dataset": "https://YOURTENANT.sharepoint.com/sites/YOURSITE",
+                  "table": "SiteSurveys",
+                  "item/Title": "@{body('Parse_survey')?['surveyId']}",
+                  "item/Revision": "@{coalesce(body('Parse_survey')?['revision'], 1)}",
+                  "item/SurveyDate": "@{body('Parse_survey')?['surveyDate']}",
+                  "item/StartedAt": "@{body('Parse_survey')?['startedAt']}",
+                  "item/SubmittedAt": "@{body('Parse_survey')?['submittedAt']}",
+                  "item/LastEditedAt": "@{body('Parse_survey')?['lastEditedAt']}",
+                  "item/EngineerName": "@{body('Parse_survey')?['engineerName']}",
+                  "item/EngineerCode": "@{body('Parse_survey')?['engineerId']}",
+                  "item/Designation": "@{body('Parse_survey')?['submittedBy']?['designation']}",
+                  "item/EngineerBranch": "@{body('Parse_survey')?['submittedBy']?['branch']}",
+                  "item/EngineerZone": "@{body('Parse_survey')?['submittedBy']?['zone']}",
+                  "item/SiteCode": "@{body('Parse_survey')?['site']?['siteCode']}",
+                  "item/SiteName": "@{body('Parse_survey')?['site']?['siteName']}",
+                  "item/District": "@{body('Parse_survey')?['site']?['district']}",
+                  "item/StateName": "@{body('Parse_survey')?['site']?['state']}",
+                  "item/SiteBranch": "@{body('Parse_survey')?['site']?['branch']}",
+                  "item/SiteZone": "@{body('Parse_survey')?['site']?['zone']}",
+                  "item/RegionalOffice": "@{body('Parse_survey')?['site']?['regionalOffice']}",
+                  "item/UpsCapacity": "@{body('Parse_survey')?['site']?['upsCapacity']}",
+                  "item/SiteCondition": "@{body('Parse_survey')?['site']?['siteCondition']}",
+                  "item/GpsLatitude": "@{body('Parse_survey')?['gps']?['lat']}",
+                  "item/GpsLongitude": "@{body('Parse_survey')?['gps']?['lng']}",
+                  "item/LoadDetailsAvailable": "@{body('Parse_survey')?['loadDetailsAvailable']}",
+                  "item/TotalLoadKW": "@{body('Parse_survey')?['loadTotals']?['totalLoadKW']}",
+                  "item/TotalUpsLoadKW": "@{body('Parse_survey')?['loadTotals']?['totalUpsLoadKW']}",
+                  "item/CriticalUpsLoadKW": "@{body('Parse_survey')?['loadTotals']?['criticalUpsLoadKW']}",
+                  "item/IssueCount": "@{length(coalesce(body('Parse_survey')?['issues'], json('[]')))}",
+                  "item/Issues": "@{join(coalesce(body('Parse_survey')?['issues'], json('[]')), ' | ')}",
+                  "item/EngineerRemarks": "@{body('Parse_survey')?['remarks']?['engineer']}",
+                  "item/CustomerRemarks": "@{body('Parse_survey')?['remarks']?['customer']}",
+                  "item/CompletionPct": "@{body('Parse_survey')?['completionPct']}",
+                  "item/PhotoCount": "@{length(coalesce(body('Parse_survey')?['photos'], json('[]')))}",
+                  "item/RawPayload": "@{string(body('Parse_survey'))}"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Read_back_survey_item": {
+        "type": "OpenApiConnection",
+        "runAfter": {
+          "Create_or_update_survey": [
+            "Succeeded"
+          ]
+        },
+        "inputs": {
+          "host": {
+            "connectionName": "shared_sharepointonline",
+            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+            "operationId": "GetItems"
+          },
+          "parameters": {
+            "dataset": "https://YOURTENANT.sharepoint.com/sites/YOURSITE",
+            "table": "SiteSurveys",
+            "$filter": "Title eq '@{body('Parse_survey')?['surveyId']}'",
+            "$top": 1
+          }
+        },
+        "description": "Create and Update live inside the condition, and Logic Apps cannot reference an action from outside its branch. Reading the item back gives the ID for the reply."
+      },
+      "Find_old_load_lines": {
+        "type": "OpenApiConnection",
+        "runAfter": {
+          "Read_back_survey_item": [
+            "Succeeded"
+          ]
+        },
+        "inputs": {
+          "host": {
+            "connectionName": "shared_sharepointonline",
+            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+            "operationId": "GetItems"
+          },
+          "parameters": {
+            "dataset": "https://YOURTENANT.sharepoint.com/sites/YOURSITE",
+            "table": "SiteSurveyLoadLines",
+            "$filter": "SurveyId eq '@{body('Parse_survey')?['surveyId']}'",
+            "$top": 100
+          }
+        }
+      },
+      "Delete_old_load_lines": {
+        "type": "Foreach",
+        "runAfter": {
+          "Find_old_load_lines": [
+            "Succeeded"
+          ]
+        },
+        "foreach": "@body('Find_old_load_lines')?['value']",
+        "runtimeConfiguration": {
+          "concurrency": {
+            "repetitions": 1
+          }
+        },
+        "actions": {
+          "Delete_load_line": {
+            "type": "OpenApiConnection",
+            "runAfter": {},
+            "inputs": {
+              "host": {
+                "connectionName": "shared_sharepointonline",
+                "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                "operationId": "DeleteItem"
+              },
+              "parameters": {
+                "dataset": "https://YOURTENANT.sharepoint.com/sites/YOURSITE",
+                "table": "SiteSurveyLoadLines",
+                "id": "@{items('Delete_old_load_lines')?['ID']}"
+              }
+            }
+          }
+        },
+        "description": "An edit rewrites the equipment rows. Empty on a first submission."
+      },
+      "Write_load_lines": {
+        "type": "Foreach",
+        "runAfter": {
+          "Delete_old_load_lines": [
+            "Succeeded"
+          ]
+        },
+        "foreach": "@coalesce(body('Parse_survey')?['loadCalculation'], json('[]'))",
+        "actions": {
+          "Create_load_line": {
+            "type": "OpenApiConnection",
+            "runAfter": {},
+            "inputs": {
+              "host": {
+                "connectionName": "shared_sharepointonline",
+                "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                "operationId": "PostItem"
+              },
+              "parameters": {
+                "dataset": "https://YOURTENANT.sharepoint.com/sites/YOURSITE",
+                "table": "SiteSurveyLoadLines",
+                "item/Title": "@{items('Write_load_lines')?['item']}",
+                "item/SurveyId": "@{body('Parse_survey')?['surveyId']}",
+                "item/SiteCode": "@{body('Parse_survey')?['site']?['siteCode']}",
+                "item/ItemIndex": "@{items('Write_load_lines')?['i']}",
+                "item/CountAtSite": "@{items('Write_load_lines')?['count']}",
+                "item/Watts": "@{items('Write_load_lines')?['watts']}",
+                "item/CountOnUps": "@{items('Write_load_lines')?['countOnUps']}",
+                "item/LoadW": "@{items('Write_load_lines')?['loadW']}",
+                "item/LoadOnUpsW": "@{items('Write_load_lines')?['loadOnUpsW']}",
+                "item/IsCritical": "@{items('Write_load_lines')?['critical']}"
+              }
+            }
+          }
+        }
+      },
+      "Write_photographs": {
+        "type": "Foreach",
+        "runAfter": {
+          "Write_load_lines": [
+            "Succeeded"
+          ]
+        },
+        "foreach": "@coalesce(body('Parse_survey')?['photos'], json('[]'))",
+        "runtimeConfiguration": {
+          "concurrency": {
+            "repetitions": 4
+          }
+        },
+        "actions": {
+          "Only_when_the_image_is_present": {
+            "type": "If",
+            "runAfter": {},
+            "expression": {
+              "not": {
+                "equals": [
+                  "@coalesce(items('Write_photographs')?['dataUrl'], '')",
+                  ""
+                ]
+              }
+            },
+            "actions": {
+              "Create_photo_file": {
+                "type": "OpenApiConnection",
+                "runAfter": {},
+                "inputs": {
+                  "host": {
+                    "connectionName": "shared_sharepointonline",
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                    "operationId": "CreateFile"
+                  },
+                  "parameters": {
+                    "dataset": "https://YOURTENANT.sharepoint.com/sites/YOURSITE",
+                    "folderPath": "/SiteSurveyPhotos/@{body('Parse_survey')?['surveyId']}",
+                    "name": "@{items('Write_photographs')?['section']}-@{items('Write_photographs')?['id']}.jpg",
+                    "body": "@base64ToBinary(last(split(items('Write_photographs')?['dataUrl'], ',')))"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Create file overwrites a file of the same name, so a revision refreshes the folder instead of duplicating it."
+      },
+      "Respond_to_the_app": {
+        "type": "Response",
+        "kind": "Http",
+        "runAfter": {
+          "Write_photographs": [
+            "Succeeded"
+          ]
+        },
+        "inputs": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*"
+          },
+          "body": {
+            "ok": true,
+            "surveyId": "@{body('Parse_survey')?['surveyId']}",
+            "revision": "@{coalesce(body('Parse_survey')?['revision'], 1)}",
+            "itemId": "@{first(body('Read_back_survey_item')?['value'])?['ID']}"
+          }
+        }
+      }
+    }
+  }
+}

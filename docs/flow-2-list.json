@@ -1,0 +1,112 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "$connections": {
+        "defaultValue": {},
+        "type": "Object"
+      }
+    },
+    "triggers": {
+      "manual": {
+        "type": "Request",
+        "kind": "Http",
+        "inputs": {
+          "method": "GET"
+        },
+        "description": "The app calls this with ?role=&branch=&zone= . A GET with no custom headers is a simple request, so there is no CORS preflight."
+      }
+    },
+    "actions": {
+      "Build_filter": {
+        "type": "Compose",
+        "runAfter": {},
+        "inputs": "@if(equals(coalesce(triggerOutputs()['queries']?['role'],''),'branch'), concat('EngineerBranch eq ''', coalesce(triggerOutputs()['queries']?['branch'],''), ''''), if(equals(coalesce(triggerOutputs()['queries']?['role'],''),'regional'), concat('EngineerZone eq ''', coalesce(triggerOutputs()['queries']?['zone'],''), ''''), ''))",
+        "description": "admin sees everything; branch sign-ins see their branch; regional sign-ins see their zone."
+      },
+      "Get_surveys": {
+        "type": "OpenApiConnection",
+        "runAfter": {
+          "Build_filter": [
+            "Succeeded"
+          ]
+        },
+        "inputs": {
+          "host": {
+            "connectionName": "shared_sharepointonline",
+            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+            "operationId": "GetItems"
+          },
+          "parameters": {
+            "dataset": "https://YOURTENANT.sharepoint.com/sites/YOURSITE",
+            "table": "SiteSurveys",
+            "$filter": "@outputs('Build_filter')",
+            "$orderby": "Created desc",
+            "$top": 500
+          }
+        }
+      },
+      "Select_payloads": {
+        "type": "Select",
+        "runAfter": {
+          "Get_surveys": [
+            "Succeeded"
+          ]
+        },
+        "inputs": {
+          "from": "@body('Get_surveys')?['value']",
+          "select": {
+            "RawPayload": "@item()?['RawPayload']"
+          }
+        },
+        "description": "RawPayload is the whole survey as the app sent it, so the app can rebuild the full report from it."
+      },
+      "Respond_to_the_app": {
+        "type": "Response",
+        "kind": "Http",
+        "runAfter": {
+          "Select_payloads": [
+            "Succeeded"
+          ]
+        },
+        "inputs": {
+          "statusCode": 200,
+          "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*"
+          },
+          "body": "@body('Select_payloads')"
+        },
+        "description": "The Access-Control-Allow-Origin header is required or the browser will not let the page read this reply."
+      },
+      "Respond_when_it_fails": {
+        "type": "Response",
+        "kind": "Http",
+        "runAfter": {
+          "Select_payloads": [
+            "Failed",
+            "Skipped",
+            "TimedOut"
+          ],
+          "Get_surveys": [
+            "Failed",
+            "TimedOut"
+          ]
+        },
+        "inputs": {
+          "statusCode": 500,
+          "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*"
+          },
+          "body": {
+            "ok": false,
+            "error": "Could not read SiteSurveys"
+          }
+        },
+        "description": "Without this the app waits for a reply that never comes when the list read fails."
+      }
+    }
+  }
+}

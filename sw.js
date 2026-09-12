@@ -1,10 +1,16 @@
 /* ------------------------------------------------------------------
    Service worker — makes the survey app work with no signal.
-   Everything is cached on first load and served cache-first, because
-   the masters and the code only change when a new version is pushed.
-   Bump CACHE_VERSION whenever you deploy, or phones keep the old copy.
+
+   Network-first for the app's own files, cache as the fallback. A
+   cache-first worker keeps serving an old build after a deployment,
+   which is how a phone ends up running yesterday's index.html against
+   today's app.js — the app then looks broken for no visible reason.
+   Network-first costs one conditional request on a live connection and
+   still works fully offline.
+
+   Bump CACHE_VERSION on every deployment.
 ------------------------------------------------------------------ */
-const CACHE_VERSION = 'prostarm-site-survey-v10';
+const CACHE_VERSION = 'prostarm-site-survey-v11';
 const ASSETS = [
   './', './index.html',
   './css/style.css',
@@ -30,18 +36,29 @@ self.addEventListener('activate', e => {
     .then(() => self.clients.claim()));
 });
 
+self.addEventListener('message', e => {
+  // The app sends this from "Reload the app" in Diagnostics.
+  if (e.data === 'flush') {
+    caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+      .then(() => self.registration.unregister());
+  }
+});
+
 self.addEventListener('fetch', e => {
   const req = e.request;
-  if (req.method !== 'GET') return;                       // never cache the flow POST
+  if (req.method !== 'GET') return;                       // never touch the flow POST
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;        // leave Power Automate alone
+
   e.respondWith(
-    caches.match(req).then(hit => hit || fetch(req).then(res => {
-      if (res && res.status === 200 && res.type === 'basic') {
-        const copy = res.clone();
-        caches.open(CACHE_VERSION).then(c => c.put(req, copy));
-      }
-      return res;
-    }).catch(() => caches.match('./index.html')))
+    fetch(req)
+      .then(res => {
+        if (res && res.status === 200 && res.type === 'basic') {
+          const copy = res.clone();
+          caches.open(CACHE_VERSION).then(c => c.put(req, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(req).then(hit => hit || caches.match('./index.html')))
   );
 });

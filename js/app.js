@@ -3,6 +3,8 @@
    Single-file field application. No network dependency.
    ============================================================ */
 
+const APP_VERSION = 'v11';
+
 const CONFIG = {
   brand: 'ProstarM',
   client: 'Anweta Venture',
@@ -1171,9 +1173,10 @@ const stripPhotos = rec => Object.assign({}, rec, {
                                          id:p.id, timestamp:p.timestamp, caption:p.caption }))
 });
 
+let lastStoreError = '';
 function tryStore(all) {
-  try { localStorage.setItem(CONFIG.storeKey, JSON.stringify(all)); return true; }
-  catch (e) { return false; }
+  try { localStorage.setItem(CONFIG.storeKey, JSON.stringify(all)); lastStoreError = ''; return true; }
+  catch (e) { lastStoreError = e.name + ': ' + e.message; return false; }
 }
 
 /* POST one survey to the Power Automate flow. Resolves to the flow's reply. */
@@ -1188,7 +1191,11 @@ async function postToFlow(payload) {
       body: JSON.stringify(payload),
       signal: ctrl.signal
     });
-    if (!res.ok) throw new Error('flow returned ' + res.status);
+    if (!res.ok) {
+      let detail = '';
+      try { detail = (await res.text()).slice(0, 200); } catch (e) {}
+      throw new Error('flow returned ' + res.status + (detail ? ' — ' + detail : ''));
+    }
     const text = await res.text();
     try { return JSON.parse(text); } catch (e) { return { ok: true }; }
   } finally { clearTimeout(timer); }
@@ -1201,17 +1208,24 @@ async function submitSurveyToServer(payload) {
     syncError: '', syncedAt: null, sharePointItemId: null
   });
 
+  // Free the draft copy of the same photographs before writing the submission,
+  // or a device near its storage limit has to hold both at once.
+  try { localStorage.removeItem(CONFIG.draftKey); } catch (e) {}
+
   const all = storedSurveys();
   const existing = all.findIndex(r => r.surveyId === payload.surveyId);
   if (existing === -1) all.push(rec); else all[existing] = rec;   // an edit replaces, never duplicates
-  if (!tryStore(all)) {
+  let stored = tryStore(all);
+  if (!stored) {
     // Device storage is finite. Give up the oldest photographs first so the most
     // recent surveys keep their images, and never lose the survey data itself.
-    for (let i = 0; i < all.length - 1 && !tryStore(all); i++) all[i] = stripPhotos(all[i]);
-    if (!tryStore(all)) {
-      all[all.length - 1] = stripPhotos(all[all.length - 1]);
-      tryStore(all);
-    }
+    for (let i = 0; i < all.length - 1 && !stored; i++) { all[i] = stripPhotos(all[i]); stored = tryStore(all); }
+    if (!stored) { all[all.length - 1] = stripPhotos(all[all.length - 1]); stored = tryStore(all); }
+  }
+  if (!stored) {
+    // Nothing was written. Say so rather than reporting a submission that vanished.
+    lastStoreError = 'localStorage full — survey not saved on this device';
+    toast(t('This device is out of storage. The survey could not be saved.'));
   }
 
   if (CONFIG.flowUrl) {
@@ -1292,7 +1306,6 @@ async function doSubmit() {
     state.submitted = true;
     state.submittedAt = new Date().toISOString();
     const res = await submitSurveyToServer(surveyJSON());
-    try { localStorage.removeItem(CONFIG.draftKey); } catch (e) {}
     $('#confirmModal').classList.remove('show');
     lockSubmitted();
     refresh();
@@ -1811,9 +1824,9 @@ const isEngineer = () => !state.user || state.user.role === 'engineer';
 
 function mySurveys() {
   const all = storedSurveys();
-  const local = isEngineer()
-    ? all.filter(r => r.submittedBy && r.submittedBy.userId === state.user.userId)
-    : all;
+  const mine = r => (r.submittedBy && r.submittedBy.userId === state.user.userId) ||
+                    (r.engineerId && r.engineerId === state.user.userId);
+  const local = isEngineer() ? all.filter(mine) : all;
   // A survey already held on this device wins over the SharePoint copy of itself.
   const here = {};
   local.forEach(r => { here[r.surveyId] = true; });
@@ -1857,33 +1870,72 @@ function showView(v) {
   $('#minePanel').style.display   = v === 'mine' ? '' : 'none';
   $('#stepper').style.display     = v === 'survey' ? '' : 'none';
   $('.bottomnav').style.display   = v === 'survey' ? '' : 'none';
-  if (v === 'mine') renderMine();
+  if (v === 'mine') { renderMine(); renderDiagnostics(); }
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function storageUsedKB() {
+  try {
+    let n = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      n += (k.length + (localStorage.getItem(k) || '').length);
+    }
+    return Math.round(n / 512);   // UTF-16, two bytes a character
+  } catch (e) { return -1; }
+}
+
+function renderDiagnostics() {
+  const box = $('#diagBox');
+  if (!box) return;
+  const all = storedSurveys();
+  const lines = [
+    [t('App version'), APP_VERSION],
+    [t('Signed in as'), state.user ? state.user.userId + ' · ' + state.user.role : '—'],
+    [t('Surveys stored on this device'), String(all.length)],
+    [t('Shown in this list'), String(mySurveys().length)],
+    [t('Device storage used'), storageUsedKB() < 0 ? '—' : storageUsedKB() + ' KB'],
+    [t('Submit flow'), CONFIG.flowUrl ? t('configured') : t('not configured — device only')],
+    [t('List flow'), CONFIG.listUrl ? t('configured') : t('not configured — device only')],
+    [t('Last storage error'), lastStoreError || '—'],
+    [t('Last send error'), (all.filter(r => r.syncError).slice(-1)[0] || {}).syncError || '—']
+  ];
+  box.innerHTML = lines.map(l =>
+    '<div class="r"><span>' + esc(l[0]) + '</span><b>' + esc(l[1]) + '</b></div>').join('');
 }
 
 function renderMine() {
   const list = mySurveys();
   $('#mineCount').textContent = list.length;
   $('#mineBig').textContent = list.length;
-  $('#mineTitle').textContent = t(isEngineer() ? 'Surveys completed' : 'All surveys');
-  $('#mineScopeLine').textContent = t(isEngineer()
+  const titleEl = $('#mineTitle'), scopeEl = $('#mineScopeLine');
+  if (titleEl) titleEl.textContent = t(isEngineer() ? 'Surveys completed' : 'All surveys');
+  if (scopeEl) scopeEl.textContent = t(isEngineer()
     ? 'submitted from this device'
     : 'from every engineer, on this device and from SharePoint');
+  if (!titleEl) return;
   const fetchBtn = $('#btnFetchAll');
-  fetchBtn.style.display = (!isEngineer() && CONFIG.listUrl) ? '' : 'none';
+  if (fetchBtn) fetchBtn.style.display = (!isEngineer() && CONFIG.listUrl) ? '' : 'none';
   $('#btnMineExportAll').style.display = list.length ? '' : 'none';
 
   const pending = pendingSurveys().length;
   const btn = $('#btnSyncNow');
-  btn.style.display = CONFIG.flowUrl ? '' : 'none';
-  btn.textContent = pending ? t('Send') + ' ' + pending + ' ' + t('pending to SharePoint') : t('Everything sent');
-  btn.disabled = !pending || syncing;
-  $('#syncLine').style.display = CONFIG.flowUrl ? '' : 'none';
-  $('#syncLine').textContent = CONFIG.flowUrl
+  if (btn) {
+    btn.style.display = CONFIG.flowUrl ? '' : 'none';
+    btn.textContent = pending ? t('Send') + ' ' + pending + ' ' + t('pending to SharePoint') : t('Everything sent');
+    btn.disabled = !pending || syncing;
+  }
+  const line = $('#syncLine');
+  if (!line) return renderMineRows(list);
+  line.style.display = CONFIG.flowUrl ? '' : 'none';
+  line.textContent = CONFIG.flowUrl
     ? (pending ? t('Surveys send automatically. These are waiting for a connection.')
                : t('All surveys on this device have reached SharePoint.'))
     : '';
+  renderMineRows(list);
+}
 
+function renderMineRows(list) {
   if (!list.length) {
     $('#mineList').innerHTML = '<div class="card"><div class="cbody"><div class="empty-state">' +
       esc(t('No surveys submitted from this device yet.')) + '</div></div></div>';
@@ -2141,6 +2193,19 @@ function wireButtons() {
   });
   on('#btnMineExportAll','click', exportAll);
   on('#btnFetchAll','click', fetchAllSurveys);
+  on('#btnDiag','click', () => {
+    const d = $('#diagCard');
+    d.style.display = d.style.display === 'none' ? '' : 'none';
+    renderDiagnostics();
+  });
+  on('#btnFlushCache','click', async () => {
+    try {
+      if ('caches' in window) for (const k of await caches.keys()) await caches.delete(k);
+      const regs = navigator.serviceWorker ? await navigator.serviceWorker.getRegistrations() : [];
+      for (const r of regs) await r.unregister();
+    } catch (e) {}
+    location.reload(true);
+  });
   on('#btnCancelEdit','click', cancelEdit);
   on('#btnSyncNow','click', () => syncPending(false));
   // A phone that regains signal should catch up without being asked.
