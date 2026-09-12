@@ -3,7 +3,7 @@
    Single-file field application. No network dependency.
    ============================================================ */
 
-const APP_VERSION = 'v14';
+const APP_VERSION = 'v15';
 
 const CONFIG = {
   brand: 'ProstarM',
@@ -24,6 +24,8 @@ const CONFIG = {
      --------------------------------------------------------------- */
   flowUrl: (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.flowUrl) || '',
   listUrl: (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.listUrl) || '',
+  authUrl: (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.authUrl) || '',
+  authCacheKey: 'prostarm_auth_cache_v1',
   flowContentType: (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.flowContentType) || 'text/plain;charset=UTF-8',
   flowTimeoutMs: 45000,
   photoMaxPx: 1400,
@@ -1961,6 +1963,7 @@ function renderDiagnostics() {
     [t('Device storage used'), storageUsedKB() < 0 ? '—' : storageUsedKB() + ' KB'],
     [t('Submit flow'), CONFIG.flowUrl ? t('configured') : t('not configured — device only')],
     [t('List flow'), CONFIG.listUrl ? t('configured') : t('not configured — device only')],
+    [t('Sign-in directory'), CONFIG.authUrl ? t('SharePoint') : t('bundled user list')],
     [t('Last storage error'), lastStoreError || '—'],
     [t('Last send error'), (all.filter(r => r.syncError).slice(-1)[0] || {}).syncError || '—']
   ];
@@ -2234,17 +2237,104 @@ function sessionUser(u) {
            managerCode:u.managerCode || '', managerName:u.managerName || '' };
 }
 
-function authenticate(id, pwd, role) {
+/* The role always comes from the directory, never from the page. The picker only
+   has to agree with it, so a wrong choice is caught and named plainly. */
+function checkRole(user, role) {
+  if (role && (user.role || 'engineer') !== role)
+    return { ok:false, msg:'This employee code is registered as ' + roleLabel(user.role || 'engineer') +
+                           '. Choose that role and sign in again.' };
+  return { ok:true, user: user };
+}
+
+/* ---- offline re-entry ----------------------------------------------------
+   A phone that has signed in once against SharePoint keeps a salted SHA-256 of
+   that password so the same person can get back in with no signal. The password
+   itself is never written to the device. */
+async function hashPassword(userId, pwd, salt) {
+  if (!(window.crypto && crypto.subtle)) return null;
+  const data = new TextEncoder().encode(salt + '|' + String(userId).toLowerCase() + '|' + pwd);
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function authCache() { try { return JSON.parse(localStorage.getItem(CONFIG.authCacheKey) || '{}'); } catch (e) { return {}; } }
+
+async function rememberCredentials(user, pwd) {
+  try {
+    const cache = authCache();
+    if (!cache.salt) cache.salt = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const hash = await hashPassword(user.userId, pwd, cache.salt);
+    if (!hash) return;
+    cache.users = cache.users || {};
+    cache.users[String(user.userId).toLowerCase()] = { hash:hash, user:user, at:new Date().toISOString() };
+    localStorage.setItem(CONFIG.authCacheKey, JSON.stringify(cache));
+  } catch (e) {}
+}
+
+async function authenticateOffline(id, pwd) {
+  const cache = authCache();
+  const entry = (cache.users || {})[String(id).trim().toLowerCase()];
+  if (!entry || !cache.salt) return null;
+  const hash = await hashPassword(entry.user.userId, pwd, cache.salt);
+  if (!hash || hash !== entry.hash) return { ok:false, msg:'Wrong password. Try again.' };
+  return { ok:true, user: entry.user, offline:true };
+}
+
+/* Bundled list — used when no directory flow is configured, and as nothing more
+   than a fallback once one is. */
+function authenticateLocal(id, pwd) {
   const u = findUser(id);
   if (!u) return { ok:false, msg:'No user found with that ID. Check the employee code.' };
   if (u.active === false) return { ok:false, msg:'This user is not active. Contact the regional office.' };
   if (String(u.password) !== String(pwd)) return { ok:false, msg:'Wrong password. Try again.' };
-  // The role comes from the user master, never from the page. The picker only has
-  // to agree with it, so a wrong choice is caught here and named plainly.
-  if (role && (u.role || 'engineer') !== role)
-    return { ok:false, msg:'This employee code is registered as ' + roleLabel(u.role || 'engineer') +
-                           '. Choose that role and sign in again.' };
   return { ok:true, user: sessionUser(u) };
+}
+
+async function authenticate(id, pwd, role) {
+  id = String(id || '').trim();
+
+  if (!CONFIG.authUrl) {
+    const r = authenticateLocal(id, pwd);
+    return r.ok ? checkRole(r.user, role) : r;
+  }
+
+  try {
+    const res = await fetch(CONFIG.authUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': CONFIG.flowContentType },   // text/plain, so no CORS preflight
+      body: JSON.stringify({ userId: id, password: pwd })
+    });
+    if (!res.ok && res.status !== 401)
+      throw new Error('directory returned ' + res.status);
+
+    const text = await res.text();
+    let data = {};
+    try { data = JSON.parse(text); } catch (e) { throw new Error('directory sent an unreadable reply'); }
+
+    if (!data.ok)
+      return { ok:false, msg: data.message || 'No user found with that ID. Check the employee code.' };
+
+    const user = sessionUser(data.user || {});
+    if (!user.userId) return { ok:false, msg:'The directory returned a record with no employee code.' };
+    await rememberCredentials(user, pwd);
+    return checkRole(user, role);
+
+  } catch (e) {
+    // The directory is unreachable. Let someone who has signed in on this phone
+    // before back in, and say plainly what happened to anyone who has not.
+    const cached = await authenticateOffline(id, pwd);
+    if (cached && cached.ok) {
+      const r = checkRole(cached.user, role);
+      if (r.ok) r.offline = true;
+      return r;
+    }
+    if (cached && !cached.ok) return cached;
+
+    const local = findUser(id) ? authenticateLocal(id, pwd) : null;
+    if (local && local.ok) return checkRole(local.user, role);
+
+    return { ok:false, msg:'Cannot reach the user directory, and this phone has no signed-in record yet. Connect once and try again.' };
+  }
 }
 
 function saveSession(user, remember) {
@@ -2303,16 +2393,32 @@ function paintRolePicker() {
     '</button>').join('');
 }
 
-function doLogin() {
+let signingIn = false;
+
+async function doLogin() {
+  if (signingIn) return;
   const id = $('#loginUser').value, pwd = $('#loginPass').value;
   if (!selectedRole) { showLoginMsg(t('Choose your role to continue.')); return; }
   if (!id.trim()) { showLoginMsg(t('Enter your user ID.')); return; }
-  const r = authenticate(id, pwd, selectedRole);
+
+  const btn = $('#btnLogin');
+  signingIn = true;
+  if (CONFIG.authUrl) { btn.disabled = true; btn.textContent = t('Checking…'); }
+
+  let r;
+  try { r = await authenticate(id, pwd, selectedRole); }
+  finally {
+    signingIn = false;
+    btn.disabled = false;
+    btn.textContent = t('Sign in');
+  }
+
   if (!r.ok) { showLoginMsg(t(r.msg)); return; }
   saveSession(r.user, $('#loginRemember').checked);
   showLoginMsg('');
   $('#loginPass').value = '';
   enterApp(r.user);
+  if (r.offline) toast(t('Signed in from this phone\'s saved record — the directory was unreachable.'));
 
   const d = loadDraftObject();
   if (d && d.userId && d.userId !== r.user.userId) {
@@ -2541,8 +2647,13 @@ document.addEventListener('DOMContentLoaded', () => {
   refresh();
 
   const sess = readSession();
-  const u = sess && sess.user ? findUser(sess.user.userId) : null;
-  if (u && u.active !== false) {
+  // With a directory flow the bundled list may be empty, so the session record
+  // itself is what restores the user.
+  const fromMaster = sess && sess.user ? findUser(sess.user.userId) : null;
+  const u = CONFIG.authUrl
+    ? (sess && sess.user && sess.user.userId ? sess.user : null)
+    : (fromMaster && fromMaster.active !== false ? sessionUser(fromMaster) : null);
+  if (u) {
     enterApp(sessionUser(u));
     if (!offerDraft()) saveEnabled = true;
     if (CONFIG.flowUrl && navigator.onLine) setTimeout(() => syncPending(true), 1500);

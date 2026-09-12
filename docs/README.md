@@ -10,7 +10,9 @@ Files in this folder:
 |---|---|
 | `flow-request-schema.json` | Paste into the flow's **Parse JSON** action |
 | `flow-1-submit.json` | Flow 1 — receives a survey and writes it to SharePoint |
-| `flow-2-list.json` | Flow 2 — reads every survey back for admin sign-ins |
+| `flow-2-list.json` | Flow 2 — reads surveys back, scoped by role |
+| `flow-3-auth.json` | Flow 3 — signs people in against the SharePoint user list |
+| `users-for-sharepoint.csv` | All 216 users, ready to import into `SiteSurveyUsers` |
 | `sharepoint-columns.md` | Every list and column to create |
 | `sample-payload.json` | One real submission, for testing the flow |
 
@@ -249,6 +251,61 @@ From there, Power BI over `SiteSurveys` gives you site readiness by branch, zone
 or state, and the issue counts tell the office which centres need the electrical
 contractor before delivery.
 
+
+---
+
+## 3c. Third flow: sign-in against SharePoint
+
+Without this flow the app signs people in from `data/user-master.js`, which
+means every employee code and password sits in the repository. This flow moves
+the directory into SharePoint so the app ships with none of it.
+
+Build the `SiteSurveyUsers` list first (columns in `sharepoint-columns.md`) and
+import `users-for-sharepoint.csv` — its header row already uses the internal
+names, and all 216 people are in it.
+
+New → **Instant cloud flow** → **When an HTTP request is received**, method `POST`.
+
+1. **Parse JSON** → `Parse login`, content `@json(string(triggerBody()))`,
+   schema `{ "userId": "string", "password": "string" }`.
+2. **Get items** → `Find user` on `SiteSurveyUsers`,
+   `$filter` = `Title eq '@{toUpper(trim(body('Parse_login')?['userId']))}'`, top 1.
+3. **Condition** → `Check the user`, true when all three hold: a row came back,
+   `Active` is yes, and `Password` equals the posted password.
+   - **If yes** → *Response* 200 with `{ ok: true, user: { … } }` built from the row.
+   - **If no** → *Response* 401 with `{ ok: false, message: … }`.
+4. A second *Response* on the failure path, so the app is never left waiting.
+
+`flow-3-auth.json` is the whole thing. Paste its URL into `authUrl` in
+`data/app-config.js`, then **replace `data/user-master.js` with the empty
+version** (`user-master-empty.js` in the zip, renamed). That is the point of the
+exercise — no credentials in the repo at all.
+
+### What happens with no signal
+
+Field engineers sign in where there is no connection, so:
+
+- The first sign-in on a phone must reach the directory.
+- After that the phone keeps a **salted SHA-256 of the password**, never the
+  password, and the same person can sign in again offline on that phone.
+- Someone who has never signed in on that phone is told plainly:
+  *"Cannot reach the user directory, and this phone has no signed-in record
+  yet. Connect once and try again."*
+- "Keep me signed in" still holds the session, so most engineers never see a
+  sign-in screen after the first day.
+
+### Before you trust it
+
+Passwords in a SharePoint list are readable by anyone who can open that list, so
+**break permission inheritance on `SiteSurveyUsers`**. The flow reads it under
+the connection owner's account; the engineers need no access to it themselves.
+
+The flow URL is in the page source, so anyone who finds it can try codes and
+passwords against it at speed. Two things worth doing: give each person their
+own password instead of the shared `ProstarM@1234`, and if this is going to
+carry real weight, move sign-in to Entra ID rather than a list of passwords.
+This design is a straight lift of what you have today into somewhere you can
+manage it — it is not a hardening exercise.
 
 ---
 

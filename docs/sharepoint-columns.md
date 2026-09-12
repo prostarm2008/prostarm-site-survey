@@ -111,3 +111,31 @@ files named `<section>-<photoId>.jpg`, where section is `sitecondition`,
 
 Photographs are resized to 1400 px and saved as JPEG at 72% quality on the
 phone before sending, so each is roughly 100–150 KB.
+
+
+---
+
+## List 3 — `SiteSurveyUsers`
+
+The sign-in directory. One row per person; the app never holds these.
+
+| Internal name | Type | Notes |
+|---|---|---|
+| `Title` | Single line of text | Employee code, upper case — this is what the engineer types |
+| `FullName` | Single line of text | Shown on the report and in the header |
+| `Password` | Single line of text | See the warning below |
+| `Role` | Choice | `admin`, `regional`, `branch`, `engineer` |
+| `Designation` | Single line of text | Printed on the report |
+| `Branch` | Single line of text | Must match the branch codes in the site list, e.g. `KN_Bangalore` |
+| `Zone` | Single line of text | e.g. `South - 1` |
+| `ManagerCode` | Single line of text | Optional |
+| `ManagerName` | Single line of text | Optional |
+| `Active` | Yes/No | Default Yes. Set No to block a sign-in without deleting the row |
+
+Import `users-for-sharepoint.csv` straight into this list — the header row
+already uses these internal names. Set `Title` to be indexed if the list will
+grow past a few thousand rows.
+
+**Break permission inheritance on this list.** Everyone who can open the site
+can otherwise read every password in it. The flow reads the list under the
+connection owner's account, so the engineers themselves need no access at all.

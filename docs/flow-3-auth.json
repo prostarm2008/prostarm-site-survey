@@ -1,0 +1,167 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "$connections": {
+        "defaultValue": {},
+        "type": "Object"
+      }
+    },
+    "triggers": {
+      "manual": {
+        "type": "Request",
+        "kind": "Http",
+        "inputs": {
+          "method": "POST"
+        },
+        "description": "The app posts {\"userId\":\"PM1136\",\"password\":\"...\"} as text/plain, so there is no CORS preflight. Leave the trigger schema box empty."
+      }
+    },
+    "actions": {
+      "Parse_login": {
+        "type": "ParseJson",
+        "runAfter": {},
+        "inputs": {
+          "content": "@json(string(triggerBody()))",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "userId": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "Find_user": {
+        "type": "OpenApiConnection",
+        "runAfter": {
+          "Parse_login": [
+            "Succeeded"
+          ]
+        },
+        "inputs": {
+          "host": {
+            "connectionName": "shared_sharepointonline",
+            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+            "operationId": "GetItems"
+          },
+          "parameters": {
+            "dataset": "https://YOURTENANT.sharepoint.com/sites/YOURSITE",
+            "table": "SiteSurveyUsers",
+            "$filter": "Title eq '@{toUpper(trim(body('Parse_login')?['userId']))}'",
+            "$top": 1
+          }
+        },
+        "description": "Title holds the employee code. Store codes in upper case so this match is predictable."
+      },
+      "Check_the_user": {
+        "type": "If",
+        "runAfter": {
+          "Find_user": [
+            "Succeeded"
+          ]
+        },
+        "expression": {
+          "and": [
+            {
+              "greater": [
+                "@length(body('Find_user')?['value'])",
+                0
+              ]
+            },
+            {
+              "equals": [
+                "@coalesce(first(body('Find_user')?['value'])?['Active'], true)",
+                true
+              ]
+            },
+            {
+              "equals": [
+                "@string(first(body('Find_user')?['value'])?['Password'])",
+                "@string(body('Parse_login')?['password'])"
+              ]
+            }
+          ]
+        },
+        "actions": {
+          "Respond_with_the_user": {
+            "type": "Response",
+            "kind": "Http",
+            "runAfter": {},
+            "inputs": {
+              "statusCode": 200,
+              "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*"
+              },
+              "body": {
+                "ok": true,
+                "user": {
+                  "userId": "@{first(body('Find_user')?['value'])?['Title']}",
+                  "name": "@{first(body('Find_user')?['value'])?['FullName']}",
+                  "role": "@{coalesce(first(body('Find_user')?['value'])?['Role'], 'engineer')}",
+                  "designation": "@{first(body('Find_user')?['value'])?['Designation']}",
+                  "branch": "@{first(body('Find_user')?['value'])?['Branch']}",
+                  "zone": "@{first(body('Find_user')?['value'])?['Zone']}",
+                  "managerCode": "@{first(body('Find_user')?['value'])?['ManagerCode']}",
+                  "managerName": "@{first(body('Find_user')?['value'])?['ManagerName']}"
+                }
+              }
+            }
+          }
+        },
+        "else": {
+          "actions": {
+            "Respond_with_a_refusal": {
+              "type": "Response",
+              "kind": "Http",
+              "runAfter": {},
+              "inputs": {
+                "statusCode": 401,
+                "headers": {
+                  "Content-Type": "application/json",
+                  "Access-Control-Allow-Origin": "*"
+                },
+                "body": {
+                  "ok": false,
+                  "message": "@{if(equals(length(body('Find_user')?['value']), 0), 'No user found with that ID. Check the employee code.', if(not(coalesce(first(body('Find_user')?['value'])?['Active'], true)), 'This user is not active. Contact the regional office.', 'Wrong password. Try again.'))}"
+                }
+              },
+              "description": "One reply covers all three refusals, so the app can show the reason without the flow leaking which codes exist beyond what the office already knows."
+            }
+          }
+        }
+      },
+      "Respond_when_it_fails": {
+        "type": "Response",
+        "kind": "Http",
+        "runAfter": {
+          "Find_user": [
+            "Failed",
+            "TimedOut"
+          ],
+          "Parse_login": [
+            "Failed"
+          ]
+        },
+        "inputs": {
+          "statusCode": 500,
+          "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*"
+          },
+          "body": {
+            "ok": false,
+            "message": "Could not read the user directory."
+          }
+        },
+        "description": "Without this the app waits for a reply that never arrives when the list read fails."
+      }
+    }
+  }
+}

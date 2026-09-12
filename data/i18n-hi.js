@@ -478,5 +478,13 @@ const I18N = { hi: {
 "All zones": "सभी ज़ोन",
 "No sites match these filters.": "इन फ़िल्टर से कोई साइट मेल नहीं खाती।",
 "Export dashboard (CSV)": "डैशबोर्ड एक्सपोर्ट (CSV)",
-"rows exported.": "पंक्तियाँ एक्सपोर्ट हुईं।"
+"rows exported.": "पंक्तियाँ एक्सपोर्ट हुईं।",
+"Checking…": "जाँचा जा रहा है…",
+"Sign-in directory": "साइन-इन डायरेक्टरी",
+"SharePoint": "SharePoint",
+"bundled user list": "ऐप में शामिल यूज़र सूची",
+"Cannot reach the user directory, and this phone has no signed-in record yet. Connect once and try again.": "यूज़र डायरेक्टरी तक नहीं पहुँच सके, और इस फ़ोन पर पहले कभी साइन-इन नहीं हुआ। एक बार कनेक्ट होकर पुनः प्रयास करें।",
+"Signed in from this phone's saved record — the directory was unreachable.": "इस फ़ोन के सहेजे रिकॉर्ड से साइन इन — डायरेक्टरी तक नहीं पहुँच सके।",
+"The directory returned a record with no employee code.": "डायरेक्टरी ने बिना एम्प्लॉई कोड वाला रिकॉर्ड लौटाया।",
+"Could not read the user directory.": "यूज़र डायरेक्टरी पढ़ी नहीं जा सकी।"
 } };
