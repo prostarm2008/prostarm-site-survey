@@ -72,6 +72,7 @@
   </div>
 
   <div class="viewtabs" id="viewTabs">
+    <button type="button" data-view="dash" id="tabDash" style="display:none"><span data-i18n="Dashboard">Dashboard</span></button>
     <button type="button" data-view="survey" aria-selected="true"><span data-i18n="New survey">New survey</span></button>
     <button type="button" data-view="mine" aria-selected="false"><span data-i18n="My surveys">My surveys</span><span class="cnt" id="mineCount">0</span></button>
   </div>
@@ -587,7 +588,7 @@
           <p class="hint" id="syncLine" style="display:none;margin:0 0 10px"></p>
           <div class="pbtns" style="margin-top:6px">
             <button type="button" class="pbtn" id="btnSyncNow" style="display:none"></button>
-            <button type="button" class="pbtn alt" id="btnFetchAll" style="display:none" data-i18n="Load all surveys from SharePoint">Load all surveys from SharePoint</button>
+            <button type="button" class="pbtn alt" id="btnFetchAll" style="display:none">Load all surveys from SharePoint</button>
             <button type="button" class="pbtn alt" id="btnMineExportAll" data-i18n="Export all surveys">Export all surveys</button>
             <button type="button" class="pbtn alt" id="btnDiag" data-i18n="Diagnostics">Diagnostics</button>
           </div>
@@ -605,6 +606,26 @@
       </div>
 
       <div id="mineList"></div>
+    </div>
+
+    <div id="dashPanel" style="display:none">
+      <div class="card">
+        <h2 data-i18n="Visit status by state">Visit status by state</h2>
+        <div class="cbody">
+          <p class="hint" data-i18n="Every site in the master, against the surveys received. Open a state to see which sites are done, which are pending and what was flagged.">Every site in the master, against the surveys received. Open a state to see which sites are done, which are pending and what was flagged.</p>
+          <div class="kpis" id="dashKpis"></div>
+          <div class="dashbar">
+            <input type="text" id="dashSearch" placeholder="Search site, code, district or branch" data-i18n-ph="Search site, code, district or branch">
+            <select id="dashZone" aria-label="Zone"></select>
+            <select id="dashStatus" aria-label="Status"></select>
+          </div>
+          <div class="pbtns">
+            <button type="button" class="pbtn alt" id="btnDashLoad" style="display:none" data-i18n="Load all surveys from SharePoint">Load all surveys from SharePoint</button>
+            <button type="button" class="pbtn alt" id="btnDashExport" data-i18n="Export dashboard (CSV)">Export dashboard (CSV)</button>
+          </div>
+        </div>
+      </div>
+      <div id="dashList"></div>
     </div>
   </main>
 

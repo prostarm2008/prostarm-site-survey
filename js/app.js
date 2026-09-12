@@ -3,7 +3,7 @@
    Single-file field application. No network dependency.
    ============================================================ */
 
-const APP_VERSION = 'v12';
+const APP_VERSION = 'v14';
 
 const CONFIG = {
   brand: 'ProstarM',
@@ -138,6 +138,7 @@ function applyLang() {
   buildLoadTable();      // the phone layout puts its labels in data attributes
   paintEditBanner();
   if (appView === 'mine') renderMine();
+  if (appView === 'dash') { buildDashFilters(); renderDashboard(); }
   paintScope();
   paintGps();
   if ($('#reportBody').innerHTML.trim()) buildReport(reportData);
@@ -1360,6 +1361,7 @@ function reportHead(titleKey, d) {
     '</div>';
 }
 function reportStrips(d) {
+  d = d || {};
   const by = d.submittedBy || {}, v = x => (x === '' || x == null) ? '—' : x;
   const strip = (pairs, cls) => '<div class="strip' + (cls ? ' ' + cls : '') + '">' + pairs.map(p =>
     '<div><span>' + esc(p[0]) + '</span><b>' + esc(p[1]) + '</b></div>').join('') + '</div>';
@@ -1382,6 +1384,7 @@ function reportFoot(d) {
 /* Rows the engineer filled, with their group headers. Driven by the payload so a
    survey saved earlier renders exactly the same as the one in progress. */
 function filledLoadRows(d) {
+  d = d || {};
   const byIndex = {};
   (d.loadCalculation || []).forEach(r => {
     if ((r.count || 0) > 0 || (r.countOnUps || 0) > 0) byIndex[r.i] = r;
@@ -1399,6 +1402,7 @@ function filledLoadRows(d) {
 }
 
 function loadTableHtml(d) {
+  d = normaliseSurvey(d);
   if (!d.loadDetailsAvailable)
     return '<div class="notavail">' + esc(t('Load calculation details are not available at this centre.')) + '</div>';
 
@@ -1423,7 +1427,7 @@ function loadTableHtml(d) {
 }
 
 function loadSkippedNote(d) {
-  if (!d.loadDetailsAvailable) return '';
+  if (!d || !d.loadDetailsAvailable) return '';
   const items = LOAD_MASTER.filter(x => x.type === 'item').length;
   const shown = filledLoadRows(d).filter(x => x.type === 'item').length;
   const skipped = items - shown;
@@ -1432,11 +1436,30 @@ function loadSkippedNote(d) {
 
 let reportData = null;
 
+function normaliseSurvey(d) {
+  d = d || {};
+  d.site = d.site || {};
+  d.spaceSafety = d.spaceSafety || {};
+  d.wireMccb = d.wireMccb || {};
+  d.powerInput = d.powerInput || {};
+  d.recommendation = d.recommendation || {};
+  d.remarks = d.remarks || {};
+  d.comparison = d.comparison || [];
+  d.issues = d.issues || [];
+  d.photos = d.photos || [];
+  d.loadCalculation = d.loadCalculation || [];
+  if (d.loadDetailsAvailable && !d.loadTotals)
+    d.loadTotals = { totalLoadW:0, totalLoadKW:0, totalUpsLoadW:0,
+                     totalUpsLoadKW:0, criticalUpsLoadW:0, criticalUpsLoadKW:0 };
+  return d;
+}
+
 function buildReport(payload) {
-  const d = payload || reportData || surveyJSON(), s = d.site;
+  const d = normaliseSurvey(payload || reportData || surveyJSON()), s = d.site;
   const v = x => (x === '' || x == null) ? '—' : x;
   const tv = x => t(v(x));
   const dim = (o, keys) => {
+    o = o || {};
     const vals = keys.map(k => o[k]).filter(x => x !== '' && x != null);
     return vals.length ? vals.join('×') + ' ' + t(o.unit || '') : '—';
   };
@@ -1461,13 +1484,14 @@ function buildReport(payload) {
     [t('Fire extinguisher'), tv(d.spaceSafety.fireExtinguisher)]
   ]));
 
+  const eb = d.powerInput.ebVoltage || {}, ph = d.powerInput.phaseLoadAmp || {};
   const powerPanel = panel('Power input', d.powerInputApplicable
-    ? kvl([[t('EB voltage R'), v(d.powerInput.ebVoltage.r) + ' V'],
-           [t('EB voltage Y'), v(d.powerInput.ebVoltage.y) + ' V'],
-           [t('EB voltage B'), v(d.powerInput.ebVoltage.b) + ' V'],
-           [t('Load 1st phase'), v(d.powerInput.phaseLoadAmp.phase1) + ' A'],
-           [t('Load 2nd phase'), v(d.powerInput.phaseLoadAmp.phase2) + ' A'],
-           [t('Load 3rd phase'), v(d.powerInput.phaseLoadAmp.phase3) + ' A'],
+    ? kvl([[t('EB voltage R'), v(eb.r) + ' V'],
+           [t('EB voltage Y'), v(eb.y) + ' V'],
+           [t('EB voltage B'), v(eb.b) + ' V'],
+           [t('Load 1st phase'), v(ph.phase1) + ' A'],
+           [t('Load 2nd phase'), v(ph.phase2) + ' A'],
+           [t('Load 3rd phase'), v(ph.phase3) + ' A'],
            [t('Earthing available'), tv(d.powerInput.earthingAvailable)],
            [t('Earthing voltage'), tv(d.powerInput.earthingVoltage)]])
     : '<div class="notavail">' + esc(t('Not recorded — site condition is') + ' "' + t(v(s.siteCondition)) + '".') + '</div>');
@@ -1557,7 +1581,7 @@ function buildReport(payload) {
 
 /* The load calculation lives in its own tab so the survey report stays short. */
 function buildLoadReport(d) {
-  d = d || reportData || surveyJSON();
+  d = normaliseSurvey(d || reportData || surveyJSON());
   const s = d.site, v = x => (x === '' || x == null) ? '—' : x;
   const kvl = pairs => '<div class="kvl kvcols">' + pairs.map(p =>
     '<div class="r"><span>' + esc(p[0]) + '</span><b>' + esc(p[1]) + '</b></div>').join('') + '</div>';
@@ -1578,11 +1602,13 @@ function buildLoadReport(d) {
 }
 
 function wireLine(o, unit) {
+  o = o || {};
   if (o.availability === NOT_COMPLETED) return t('Electrical work not completed');
   if (o.availability === 'No') return t('Not available at site');
   return t(o.availability || 'Not recorded') + ' — ' + (o.sizeSqmm ? o.sizeSqmm + ' ' + unit : t('Not recorded'));
 }
 function mccbLine(o) {
+  o = o || {};
   if (o.availability === NOT_COMPLETED) return t('Electrical work not completed');
   if (o.availability === 'No') return t('Not available at site');
   return t(o.availability || 'Not recorded') + ' — ' + (o.ratingAmp ? o.ratingAmp + ' A' : t('Not recorded')) +
@@ -1616,6 +1642,7 @@ function hideReport() {
    14. Data export
    ============================================================ */
 function flattenSurvey(d) {
+  d = normaliseSurvey(d);
   const g = (o, k) => (o && o[k] != null && o[k] !== '') ? o[k] : '';
   const by = d.submittedBy || {};
   const cmp = {};
@@ -1857,8 +1884,12 @@ function mySurveys() {
   return local.concat(remoteSurveys.filter(r => !here[r.surveyId])).reverse();
 }
 
-/* Reads every survey back from SharePoint through the list flow. Supervisors only:
-   a field engineer has their own work on their own phone already. */
+const fetchLabel = () => t(isEngineer() ? 'Load my surveys from SharePoint'
+                                       : 'Load all surveys from SharePoint');
+
+/* Reads surveys back from SharePoint through the list flow. The flow filters by
+   role, and inScope() applies the same rule again to whatever comes back — so a
+   field engineer gets their own work and nobody else's. */
 async function fetchAllSurveys() {
   if (!CONFIG.listUrl) { toast(t('No SharePoint list flow is configured on this build.')); return; }
   const btn = $('#btnFetchAll');
@@ -1880,21 +1911,26 @@ async function fetchAllSurveys() {
       return Object.assign({}, payload, { syncStatus:'synced', fromSharePoint:true });
     }).filter(r => r && r.surveyId && inScope(r));
     renderMine();
+    if (appView === 'dash') renderDashboard();
     toast(remoteSurveys.length + ' ' + t('surveys loaded from SharePoint.'));
+    renderDiagnostics();
   } catch (e) {
     toast(t('Could not reach SharePoint.') + ' ' + e.message);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = t('Load all surveys from SharePoint'); }
+    if (btn) { btn.disabled = false; btn.textContent = fetchLabel(); }
   }
 }
 
 function showView(v) {
+  if (v === 'dash' && !isAdmin()) v = 'survey';
   appView = v;
   $$('#viewTabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === v)));
   $('#surveyPanel').style.display = v === 'survey' ? '' : 'none';
   $('#minePanel').style.display   = v === 'mine' ? '' : 'none';
+  $('#dashPanel').style.display   = v === 'dash' ? '' : 'none';
   $('#stepper').style.display     = v === 'survey' ? '' : 'none';
   $('.bottomnav').style.display   = v === 'survey' ? '' : 'none';
+  if (v === 'dash') { buildDashFilters(); renderDashboard(); }
   if (v === 'mine') { renderMine(); renderDiagnostics(); }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1951,7 +1987,10 @@ function renderMine() {
   : t(scopeText);
   if (!titleEl) return;
   const fetchBtn = $('#btnFetchAll');
-  if (fetchBtn) fetchBtn.style.display = (!isEngineer() && CONFIG.listUrl) ? '' : 'none';
+  if (fetchBtn) {
+    fetchBtn.style.display = CONFIG.listUrl ? '' : 'none';
+    if (!syncing) fetchBtn.textContent = fetchLabel();
+  }
   $('#btnMineExportAll').style.display = list.length ? '' : 'none';
 
   const pending = pendingSurveys().length;
@@ -1974,7 +2013,9 @@ function renderMine() {
 function renderMineRows(list) {
   if (!list.length) {
     $('#mineList').innerHTML = '<div class="card"><div class="cbody"><div class="empty-state">' +
-      esc(t('No surveys submitted from this device yet.')) + '</div></div></div>';
+      esc(t('No surveys submitted from this device yet.')) +
+      (CONFIG.listUrl ? '<br>' + esc(t('Use the button above to load them from SharePoint.')) : '') +
+      '</div></div></div>';
     return;
   }
 
@@ -2016,6 +2057,162 @@ function renderMineRows(list) {
       (r.syncError ? '<div class="note">' + esc(r.syncError) + '</div>' : '') +
     '</div>';
   }).join('');
+}
+
+/* ============================================================
+   14c. HO Admin dashboard
+   ------------------------------------------------------------
+   Every site in the master measured against the surveys received:
+   which have been visited, which are still waiting, and what was
+   flagged at the ones that were.
+   ============================================================ */
+const isAdmin = () => !!state.user && state.user.role === 'admin';
+let dashOpen = {};          // which state rows are expanded
+let dashFilters = { q:'', zone:'', status:'' };
+
+/* One survey per site — the newest revision wins, so an edited survey
+   replaces the version it corrected rather than counting twice. */
+function surveysBySite() {
+  const best = {};
+  mySurveys().forEach(r => {
+    const code = (r.site || {}).siteCode;
+    if (!code) return;
+    const cur = best[code];
+    if (!cur) { best[code] = r; return; }
+    const newer = (r.revision || 1) > (cur.revision || 1) ||
+                  String(r.submittedAt || '') > String(cur.submittedAt || '');
+    if (newer) best[code] = r;
+  });
+  return best;
+}
+
+function dashboardModel() {
+  const done = surveysBySite();
+  const q = dashFilters.q.trim().toLowerCase();
+  const states = {};
+  let totals = { total:0, completed:0, pending:0, issues:0, sitesWithIssues:0 };
+
+  SITE_MASTER.forEach(s => {
+    if (dashFilters.zone && s.zone !== dashFilters.zone) return;
+    const survey = done[s.siteCode] || null;
+    const status = survey ? 'completed' : 'pending';
+    if (dashFilters.status && dashFilters.status !== status) return;
+    if (q && !(s.siteCode.toLowerCase().includes(q) || s.siteName.toLowerCase().includes(q) ||
+               s.district.toLowerCase().includes(q) || (s.branch || '').toLowerCase().includes(q))) return;
+
+    const issues = survey ? (survey.issues || []) : [];
+    const st = states[s.state] || (states[s.state] = { state:s.state, total:0, completed:0, pending:0, issues:0, rows:[] });
+    st.total++; totals.total++;
+    if (survey) { st.completed++; totals.completed++; } else { st.pending++; totals.pending++; }
+    st.issues += issues.length; totals.issues += issues.length;
+    if (issues.length) totals.sitesWithIssues++;
+    st.rows.push({ site:s, survey:survey, issues:issues });
+  });
+
+  // Sites that flagged something come first, then the ones still to visit, then
+  // the clean completed ones — the order an admin chasing work needs.
+  const rank = r => r.issues.length ? 0 : (r.survey ? 2 : 1);
+  const list = Object.values(states).sort((a,b) =>
+    b.issues - a.issues || b.pending - a.pending || a.state.localeCompare(b.state));
+  list.forEach(st => st.rows.sort((a,b) =>
+    rank(a) - rank(b) || a.site.siteName.localeCompare(b.site.siteName)));
+  return { list, totals };
+}
+
+function renderDashboard() {
+  if (!$('#dashPanel')) return;
+  const m = dashboardModel(), tt = m.totals;
+  const pct = tt.total ? Math.round(tt.completed / tt.total * 100) : 0;
+
+  $('#dashKpis').innerHTML = [
+    ['Sites in master', tt.total, ''],
+    ['Visits completed', tt.completed, 'done'],
+    ['Visits pending', tt.pending, 'wait'],
+    ['Sites with issues', tt.sitesWithIssues, 'bad'],
+    ['Coverage', pct + '%', '']
+  ].map(k => '<div class="kpi ' + k[2] + '"><span>' + esc(t(k[0])) + '</span><b>' + esc(String(k[1])) + '</b></div>').join('');
+
+  const loadBtn = $('#btnDashLoad');
+  if (loadBtn) loadBtn.style.display = CONFIG.listUrl ? '' : 'none';
+
+  if (!m.list.length) {
+    $('#dashList').innerHTML = '<div class="card"><div class="cbody"><div class="empty-state">' +
+      esc(t('No sites match these filters.')) + '</div></div></div>';
+    return;
+  }
+
+  $('#dashList').innerHTML = m.list.map(st => {
+    const p = st.total ? Math.round(st.completed / st.total * 100) : 0;
+    const rows = st.rows.map(r => {
+      const s = r.site, sv = r.survey;
+      return '<div class="siterow">' +
+        '<div class="who"><b>' + esc(s.siteCode) + ' · ' + esc(s.siteName) + '</b>' +
+          '<span>' + esc(s.district) + ' · ' + esc(s.branch || '—') + ' · ' + esc(s.upsCapacity) + '</span>' +
+          (sv ? '<span>' + esc(fmtDate(sv.surveyDate)) + ' · ' + esc(sv.engineerName || '—') +
+                ((sv.revision || 1) > 1 ? ' · ' + esc(t('revision') + ' ' + sv.revision) : '') + '</span>' : '') +
+        '</div>' +
+        '<span class="st tag ' + (sv ? 'ok' : 'warn') + '">' +
+          esc(t(sv ? 'Visit completed' : 'Visit pending')) + '</span>' +
+        (sv ? '<button type="button" class="open" data-dashopen="' + esc(sv.surveyId) + '">' +
+              esc(t('Report')) + '</button>' : '') +
+        (r.issues.length
+          ? '<div class="issues"><b>' + esc(t('Issues found')) + ' (' + r.issues.length + ')</b>' +
+            r.issues.map(i => '• ' + esc(t(i))).join('<br>') + '</div>'
+          : (sv ? '' : '')) +
+      '</div>';
+    }).join('');
+
+    return '<div class="strow"' + (dashOpen[st.state] ? ' open' : '') + '>' +
+      '<div class="head" data-dashstate="' + esc(st.state) + '">' +
+        '<span class="plus">' + (dashOpen[st.state] ? '−' : '+') + '</span>' +
+        '<span class="stname">' + esc(st.state) + '</span>' +
+        '<div class="nums">' +
+          '<div><span>' + esc(t('Sites')) + '</span><b>' + st.total + '</b></div>' +
+          '<div class="c"><span>' + esc(t('Done')) + '</span><b>' + st.completed + '</b></div>' +
+          '<div class="p"><span>' + esc(t('Pending')) + '</span><b>' + st.pending + '</b></div>' +
+          '<div class="i"><span>' + esc(t('Issues')) + '</span><b>' + st.issues + '</b></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="meter"><i style="width:' + p + '%"></i></div>' +
+      '<div class="sitelist">' + rows + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function buildDashFilters() {
+  const z = $('#dashZone'), s = $('#dashStatus');
+  if (!z) return;
+  const zones = [];
+  SITE_MASTER.forEach(x => { if (x.zone && zones.indexOf(x.zone) === -1) zones.push(x.zone); });
+  zones.sort();
+  z.innerHTML = '<option value="">' + esc(t('All zones')) + '</option>' +
+    zones.map(x => '<option value="' + esc(x) + '">' + esc(x) + '</option>').join('');
+  z.value = dashFilters.zone;
+  s.innerHTML = '<option value="">' + esc(t('All sites')) + '</option>' +
+    '<option value="completed">' + esc(t('Visit completed')) + '</option>' +
+    '<option value="pending">' + esc(t('Visit pending')) + '</option>';
+  s.value = dashFilters.status;
+}
+
+function exportDashboard() {
+  const m = dashboardModel();
+  const rows = [];
+  m.list.forEach(st => st.rows.forEach(r => {
+    const s = r.site, sv = r.survey;
+    rows.push({
+      'State': s.state, 'Zone': s.zone, 'Branch': s.branch,
+      'Site code': s.siteCode, 'Site name': s.siteName, 'District': s.district,
+      'UPS capacity': s.upsCapacity,
+      'Visit status': sv ? 'Completed' : 'Pending',
+      'Survey ID': sv ? sv.surveyId : '', 'Revision': sv ? (sv.revision || 1) : '',
+      'Survey date': sv ? sv.surveyDate : '', 'Engineer': sv ? sv.engineerName : '',
+      'Engineer code': sv ? sv.engineerId : '',
+      'Issue count': r.issues.length, 'Issues': r.issues.join(' | ')
+    });
+  }));
+  if (!rows.length) { toast(t('No sites match these filters.')); return; }
+  download('site-visit-status-' + todayISO().replace(/-/g,'') + '.csv', toCSV(rows), 'text/csv');
+  toast(rows.length + ' ' + t('rows exported.'));
 }
 
 /* ============================================================
@@ -2083,6 +2280,7 @@ function enterApp(user) {
     (user.branch ? ' · ' + user.branch : '');
   $('#userChipWrap').style.display = '';
   $('#btnExportAll').style.display = (user.role === 'engineer') ? 'none' : '';
+  $('#tabDash').style.display = (user.role === 'admin') ? '' : 'none';
   $$('.pbtn, .clearbtn').forEach(b => b.disabled = false);
   siteScope = 'branch';
   stateFilterValue = '';
@@ -2255,6 +2453,26 @@ function wireButtons() {
   });
   on('#btnMineExportAll','click', exportAll);
   on('#btnFetchAll','click', fetchAllSurveys);
+  on('#btnDashLoad','click', async () => { await fetchAllSurveys(); renderDashboard(); });
+  on('#btnDashExport','click', exportDashboard);
+  on('#dashSearch','input', e => { dashFilters.q = e.target.value; renderDashboard(); });
+  on('#dashZone','change', e => { dashFilters.zone = e.target.value; renderDashboard(); });
+  on('#dashStatus','change', e => { dashFilters.status = e.target.value; renderDashboard(); });
+  $('#dashList').addEventListener('click', e => {
+    const head = e.target.closest('[data-dashstate]');
+    if (head) {
+      const k = head.dataset.dashstate;
+      dashOpen[k] = !dashOpen[k];
+      renderDashboard();
+      return;
+    }
+    const open = e.target.closest('[data-dashopen]');
+    if (open) {
+      const rec = mySurveys().find(x => x.surveyId === open.dataset.dashopen);
+      if (rec) { reportTab = 'survey'; showReport(rec); }
+      else toast(t('That survey is no longer on this device.'));
+    }
+  });
   on('#btnDiag','click', () => {
     const d = $('#diagCard');
     d.style.display = d.style.display === 'none' ? '' : 'none';

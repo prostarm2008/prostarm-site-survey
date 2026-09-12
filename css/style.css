@@ -133,6 +133,52 @@ button{cursor:pointer}
   border:1px solid var(--amber);background:var(--panel);color:var(--amber);font-size:12.5px;font-weight:700
 }
 
+/* ---------- HO Admin dashboard ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;margin-bottom:14px}
+.kpi{border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;background:var(--tile)}
+.kpi span{display:block;font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
+.kpi b{display:block;font-size:26px;font-weight:800;letter-spacing:-.6px;color:var(--navy);
+       font-variant-numeric:tabular-nums;margin-top:2px}
+.kpi.done b{color:var(--ok)} .kpi.wait b{color:var(--amber)} .kpi.bad b{color:var(--bad)}
+
+.dashbar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:12px}
+.dashbar input,.dashbar select{flex:1 1 190px;min-height:44px}
+
+.strow{border:1px solid var(--line);border-radius:var(--radius);margin-bottom:9px;background:var(--panel);overflow:hidden}
+.strow > .head{display:flex;align-items:center;gap:11px;padding:10px 12px;cursor:pointer;background:var(--tile)}
+.strow > .head:hover{background:#eaf3fa}
+.strow .plus{
+  flex:0 0 auto;width:26px;height:26px;border-radius:6px;border:1px solid var(--blue);
+  background:var(--panel);color:var(--blue);font-size:17px;font-weight:800;line-height:1;
+  display:grid;place-items:center
+}
+.strow[open] .plus{background:var(--grad-head);color:#fff}
+.strow .stname{flex:1 1 auto;font-size:14px;font-weight:800;color:var(--navy);min-width:120px}
+.strow .nums{display:flex;gap:0;flex:0 0 auto;flex-wrap:wrap}
+.strow .nums div{padding:0 11px;border-left:1px solid var(--line-soft);text-align:right;min-width:64px}
+.strow .nums span{display:block;font-size:9px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.strow .nums b{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
+.strow .nums .c b{color:var(--ok)} .strow .nums .p b{color:var(--amber)} .strow .nums .i b{color:var(--bad)}
+.meter{height:5px;background:#dbe7ef;border-radius:3px;overflow:hidden;margin:0 12px 10px}
+.meter i{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--ok))}
+.sitelist{display:none;border-top:1px solid var(--line)}
+.strow[open] .sitelist{display:block}
+.siterow{display:flex;gap:11px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid var(--line-soft)}
+.siterow:last-child{border-bottom:0}
+.siterow .who{flex:1 1 220px;min-width:0}
+.siterow .who b{display:block;font-size:13px;font-weight:800;color:var(--navy)}
+.siterow .who span{display:block;font-size:11px;color:var(--muted)}
+.siterow .st{flex:0 0 auto;align-self:center}
+.siterow .issues{flex:1 1 100%;margin:6px 0 0;padding:8px 10px;border-radius:6px;
+  background:var(--amber-bg);border:1px solid var(--amber-line);color:#6f4d0d;font-size:11.5px;line-height:1.5}
+.siterow .issues b{display:block;font-size:10px;letter-spacing:.4px;text-transform:uppercase;margin-bottom:3px}
+.siterow .open{flex:0 0 auto;align-self:center;min-height:36px;padding:0 12px;border-radius:6px;
+  border:1px solid var(--line);background:var(--panel);font-size:12px;font-weight:700;color:var(--blue)}
+@media(max-width:600px){
+  .strow .nums div{min-width:54px;padding:0 8px}
+  .siterow{flex-wrap:wrap}
+}
+
 /* ---------- Diagnostics ---------- */
 .diag{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
 .diag .r{display:flex;justify-content:space-between;gap:12px;padding:8px 12px;
