@@ -10,7 +10,7 @@
 
    Bump CACHE_VERSION on every deployment.
 ------------------------------------------------------------------ */
-const CACHE_VERSION = 'prostarm-site-survey-v11';
+const CACHE_VERSION = 'prostarm-site-survey-v12';
 const ASSETS = [
   './', './index.html',
   './css/style.css',

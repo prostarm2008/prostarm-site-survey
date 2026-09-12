@@ -22,8 +22,8 @@
       "Build_filter": {
         "type": "Compose",
         "runAfter": {},
-        "inputs": "@if(equals(coalesce(triggerOutputs()['queries']?['role'],''),'branch'), concat('EngineerBranch eq ''', coalesce(triggerOutputs()['queries']?['branch'],''), ''''), if(equals(coalesce(triggerOutputs()['queries']?['role'],''),'regional'), concat('EngineerZone eq ''', coalesce(triggerOutputs()['queries']?['zone'],''), ''''), ''))",
-        "description": "admin sees everything; branch sign-ins see their branch; regional sign-ins see their zone."
+        "inputs": "@if(equals(coalesce(triggerOutputs()['queries']?['role'],''),'admin'), '', if(equals(coalesce(triggerOutputs()['queries']?['role'],''),'regional'), concat('EngineerZone eq ''', coalesce(triggerOutputs()['queries']?['zone'],''), ''''), if(equals(coalesce(triggerOutputs()['queries']?['role'],''),'branch'), concat('EngineerBranch eq ''', coalesce(triggerOutputs()['queries']?['branch'],''), ''''), concat('EngineerCode eq ''', coalesce(triggerOutputs()['queries']?['userId'],''), ''''))))",
+        "description": "HO Admin sees every zone, a Regional Manager their own zone, a Branch Official their own branch, a Field Engineer only their own surveys. The app sends role, userId, branch and zone on the query string; the app applies the same rule again on what comes back."
       },
       "Get_surveys": {
         "type": "OpenApiConnection",

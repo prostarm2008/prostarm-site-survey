@@ -400,8 +400,9 @@ tfoot td.calc{background:#d5e6f3}
 }
 #loginView.show{display:flex}
 .loginbox{width:100%;max-width:404px;background:var(--panel);border-radius:12px;overflow:hidden;box-shadow:0 18px 50px rgba(6,26,46,.45)}
+.loginbanner{display:block;width:100%;height:auto}
 .loginhead{display:flex;align-items:center;justify-content:space-between;gap:12px;
-           padding:16px 20px 0}
+           padding:14px 20px 0}
 .loginlogo{height:32px;width:auto;display:block}
 .loginbody{padding:14px 20px 20px}
 .langtoggle{display:flex;gap:0;border:1px solid var(--line);border-radius:20px;overflow:hidden;flex:0 0 auto}
@@ -417,6 +418,18 @@ tfoot td.calc{background:#d5e6f3}
 .pwrow{display:flex;gap:8px}
 .pwrow input{flex:1}
 #btnShowPass{flex:0 0 66px;border:1px solid var(--line);border-radius:var(--radius);background:var(--tile);font-size:12.5px;font-weight:700;color:var(--blue);min-height:var(--tap)}
+.rolelab{display:block;font-size:12.5px;font-weight:700;margin:2px 0 8px;color:var(--ink)}
+.rolepicker{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.rolepicker button{
+  display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  min-height:56px;padding:8px 11px;border:1px solid var(--line);background:var(--tile);
+  border-radius:var(--radius);text-align:left
+}
+.rolepicker button b{font-size:12.5px;font-weight:800;color:var(--navy);line-height:1.2}
+.rolepicker button span{font-size:10.5px;color:var(--muted);font-weight:700}
+.rolepicker button[aria-pressed="true"]{background:var(--grad-head);border-color:var(--blue)}
+.rolepicker button[aria-pressed="true"] b,
+.rolepicker button[aria-pressed="true"] span{color:#fff}
 .remember{margin:3px 0 16px}
 #btnLogin{width:100%;min-height:52px;border:1px solid var(--blue);border-radius:var(--radius);
           background:var(--grad-head);color:#fff;font-size:15.5px;font-weight:800;letter-spacing:.3px}

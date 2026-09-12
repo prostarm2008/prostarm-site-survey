@@ -3,7 +3,7 @@
    Single-file field application. No network dependency.
    ============================================================ */
 
-const APP_VERSION = 'v11';
+const APP_VERSION = 'v12';
 
 const CONFIG = {
   brand: 'ProstarM',
@@ -66,6 +66,17 @@ const RADIO_GROUPS = ['siteCondition','branchFloor','liftAvailable','stairAvaila
 
 const NOT_COMPLETED = 'Electrical Work Not Completed';
 
+/* The four roles. `id` is the value in the user master; `scope` is the rule the
+   survey list applies. Everything else in the app reads from here. */
+const ROLES = [
+  { id:'admin',    label:'HO Admin',         scope:'Every zone' },
+  { id:'regional', label:'Regional Manager', scope:'Own zone' },
+  { id:'branch',   label:'Branch Official',  scope:'Own branch' },
+  { id:'engineer', label:'Field Engineer',   scope:'Own surveys' }
+];
+const roleLabel = id => (ROLES.find(r => r.id === id) || {}).label || id || '—';
+const roleScope = id => (ROLES.find(r => r.id === id) || {}).scope || '';
+
 const LABELS = {
   site:'Site', siteCondition:'Site condition', gps:'GPS location', surveyDate:'Survey date',
   loadRows:'Load details', branchFloor:'Branch floor', liftAvailable:'Lift availability',
@@ -123,6 +134,7 @@ function applyLang() {
   PHOTO_SECTIONS.forEach(([k]) => renderPhotos(k));
   buildStateFilter();
   buildStepper();
+  paintRolePicker();
   buildLoadTable();      // the phone layout puts its labels in data attributes
   paintEditBanner();
   if (appView === 'mine') renderMine();
@@ -1822,11 +1834,23 @@ let appView = 'survey';
 let remoteSurveys = [];          // pulled from SharePoint, read-only
 const isEngineer = () => !state.user || state.user.role === 'engineer';
 
+/* HO Admin sees every zone, a Regional Manager their own zone, a Branch Official
+   their own branch, a Field Engineer only what they submitted themselves. */
+function inScope(r) {
+  if (!state.user) return false;
+  const by = r.submittedBy || {};
+  switch (state.user.role) {
+    case 'admin':    return true;
+    case 'regional': return (by.zone || '') === (state.user.zone || '');
+    case 'branch':   return (by.branch || '') === (state.user.branch || '');
+    default:         return by.userId === state.user.userId ||
+                            (r.engineerId && r.engineerId === state.user.userId);
+  }
+}
+
 function mySurveys() {
   const all = storedSurveys();
-  const mine = r => (r.submittedBy && r.submittedBy.userId === state.user.userId) ||
-                    (r.engineerId && r.engineerId === state.user.userId);
-  const local = isEngineer() ? all.filter(mine) : all;
+  const local = all.filter(inScope);
   // A survey already held on this device wins over the SharePoint copy of itself.
   const here = {};
   local.forEach(r => { here[r.surveyId] = true; });
@@ -1842,6 +1866,7 @@ async function fetchAllSurveys() {
   try {
     const sep = CONFIG.listUrl.indexOf('?') === -1 ? '?' : '&';
     const url = CONFIG.listUrl + sep + 'role=' + encodeURIComponent(state.user.role) +
+                '&userId=' + encodeURIComponent(state.user.userId || '') +
                 '&branch=' + encodeURIComponent(state.user.branch || '') +
                 '&zone=' + encodeURIComponent(state.user.zone || '');
     const res = await fetch(url, { method:'GET' });
@@ -1853,7 +1878,7 @@ async function fetchAllSurveys() {
       const payload = typeof r === 'string' ? JSON.parse(r)
                     : (r.RawPayload ? JSON.parse(r.RawPayload) : r);
       return Object.assign({}, payload, { syncStatus:'synced', fromSharePoint:true });
-    }).filter(r => r && r.surveyId);
+    }).filter(r => r && r.surveyId && inScope(r));
     renderMine();
     toast(remoteSurveys.length + ' ' + t('surveys loaded from SharePoint.'));
   } catch (e) {
@@ -1891,7 +1916,10 @@ function renderDiagnostics() {
   const all = storedSurveys();
   const lines = [
     [t('App version'), APP_VERSION],
-    [t('Signed in as'), state.user ? state.user.userId + ' · ' + state.user.role : '—'],
+    [t('Signed in as'), state.user ? state.user.userId + ' · ' + t(roleLabel(state.user.role)) : '—'],
+    [t('Can see'), state.user ? t(roleScope(state.user.role)) +
+       (state.user.role === 'regional' ? ' (' + (state.user.zone || '—') + ')'
+      : state.user.role === 'branch'   ? ' (' + (state.user.branch || '—') + ')' : '') : '—'],
     [t('Surveys stored on this device'), String(all.length)],
     [t('Shown in this list'), String(mySurveys().length)],
     [t('Device storage used'), storageUsedKB() < 0 ? '—' : storageUsedKB() + ' KB'],
@@ -1909,10 +1937,18 @@ function renderMine() {
   $('#mineCount').textContent = list.length;
   $('#mineBig').textContent = list.length;
   const titleEl = $('#mineTitle'), scopeEl = $('#mineScopeLine');
-  if (titleEl) titleEl.textContent = t(isEngineer() ? 'Surveys completed' : 'All surveys');
-  if (scopeEl) scopeEl.textContent = t(isEngineer()
-    ? 'submitted from this device'
-    : 'from every engineer, on this device and from SharePoint');
+  const role = state.user ? state.user.role : 'engineer';
+  const scopeText = {
+    admin:    'Every zone — all surveys',
+    regional: 'Zone',
+    branch:   'Branch',
+    engineer: 'Submitted by you'
+  }[role] || '';
+  if (titleEl) titleEl.textContent = t(role === 'engineer' ? 'My surveys' : 'Survey reports');
+  if (scopeEl) scopeEl.textContent =
+    role === 'regional' ? t('Zone') + ' ' + (state.user.zone || '—')
+  : role === 'branch'   ? t('Branch') + ' ' + (state.user.branch || '—')
+  : t(scopeText);
   if (!titleEl) return;
   const fetchBtn = $('#btnFetchAll');
   if (fetchBtn) fetchBtn.style.display = (!isEngineer() && CONFIG.listUrl) ? '' : 'none';
@@ -2001,11 +2037,16 @@ function sessionUser(u) {
            managerCode:u.managerCode || '', managerName:u.managerName || '' };
 }
 
-function authenticate(id, pwd) {
+function authenticate(id, pwd, role) {
   const u = findUser(id);
   if (!u) return { ok:false, msg:'No user found with that ID. Check the employee code.' };
   if (u.active === false) return { ok:false, msg:'This user is not active. Contact the regional office.' };
   if (String(u.password) !== String(pwd)) return { ok:false, msg:'Wrong password. Try again.' };
+  // The role comes from the user master, never from the page. The picker only has
+  // to agree with it, so a wrong choice is caught here and named plainly.
+  if (role && (u.role || 'engineer') !== role)
+    return { ok:false, msg:'This employee code is registered as ' + roleLabel(u.role || 'engineer') +
+                           '. Choose that role and sign in again.' };
   return { ok:true, user: sessionUser(u) };
 }
 
@@ -2038,8 +2079,8 @@ function enterApp(user) {
   state.user = user;
   $('#loginView').classList.remove('show');
   $('#app').style.display = '';
-  $('#userChip').textContent = user.name +
-    (user.designation ? ' · ' + user.designation : '') + (user.branch ? ' · ' + user.branch : '');
+  $('#userChip').textContent = user.name + ' · ' + t(roleLabel(user.role)) +
+    (user.branch ? ' · ' + user.branch : '');
   $('#userChipWrap').style.display = '';
   $('#btnExportAll').style.display = (user.role === 'engineer') ? 'none' : '';
   $$('.pbtn, .clearbtn').forEach(b => b.disabled = false);
@@ -2053,10 +2094,22 @@ function enterApp(user) {
   refresh();
 }
 
+let selectedRole = '';
+
+function paintRolePicker() {
+  const box = $('#rolePicker');
+  if (!box) return;
+  box.innerHTML = ROLES.map(r =>
+    '<button type="button" data-role="' + r.id + '" aria-pressed="' + (selectedRole === r.id) + '">' +
+      '<b>' + esc(t(r.label)) + '</b><span>' + esc(t(r.scope)) + '</span>' +
+    '</button>').join('');
+}
+
 function doLogin() {
   const id = $('#loginUser').value, pwd = $('#loginPass').value;
+  if (!selectedRole) { showLoginMsg(t('Choose your role to continue.')); return; }
   if (!id.trim()) { showLoginMsg(t('Enter your user ID.')); return; }
-  const r = authenticate(id, pwd);
+  const r = authenticate(id, pwd, selectedRole);
   if (!r.ok) { showLoginMsg(t(r.msg)); return; }
   saveSession(r.user, $('#loginRemember').checked);
   showLoginMsg('');
@@ -2106,6 +2159,7 @@ function registerServiceWorker() {
 function applyBranding() {
   $('#hdrLogo').src = LOGO_FULL;
   $('#loginLogo').src = LOGO_FULL;
+  $('#loginBanner').src = BANNER;
   const icon = document.createElement('link');
   icon.rel = 'icon'; icon.href = LOGO_ICON;
   document.head.appendChild(icon);
@@ -2158,6 +2212,14 @@ function wireButtons() {
   });
 
   on('#btnLogin','click', doLogin);
+  $('#rolePicker').addEventListener('click', e => {
+    const b = e.target.closest('[data-role]');
+    if (!b) return;
+    selectedRole = b.dataset.role;
+    paintRolePicker();
+    showLoginMsg('');
+    $('#loginUser').focus();
+  });
   on('#btnLogout','click', doLogout);
   on('#loginPass','keydown', e => { if (e.key === 'Enter') doLogin(); });
   on('#loginUser','keydown', e => { if (e.key === 'Enter') $('#loginPass').focus(); });

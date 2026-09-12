@@ -128,14 +128,23 @@ that needs a second flow.
 
 New → **Instant cloud flow** → **When an HTTP request is received**, method `GET`.
 
-1. **Get items** → list `SiteSurveys`. Order by `Created desc`, top 500.
-   Optional filter using the query string the app sends
-   (`?role=admin&branch=MH_Mumbai&zone=West`):
-   `@{if(equals(triggerOutputs()['queries']['role'],'branch'), concat('EngineerBranch eq ''', triggerOutputs()['queries']['branch'], ''''), '')}`
-2. **Select** → map each row to `{ "RawPayload": item()?['RawPayload'] }`.
+1. **Compose** → `Build filter`. The app calls the flow with
+   `?role=&userId=&branch=&zone=`, and this turns that into an OData filter:
+
+   | Role | Filter |
+   |---|---|
+   | HO Admin | *(empty — every zone)* |
+   | Regional Manager | `EngineerZone eq '<zone>'` |
+   | Branch Official | `EngineerBranch eq '<branch>'` |
+   | Field Engineer | `EngineerCode eq '<userId>'` |
+
+   The expression is in `flow-2-list.json`; paste it rather than retyping it.
+2. **Get items** → list `SiteSurveys`, `$filter` = `@outputs('Build_filter')`,
+   order by `Created desc`, top 500.
+3. **Select** → map each row to `{ "RawPayload": item()?['RawPayload'] }`.
    `RawPayload` holds the whole survey, so the app can rebuild the full report
    from it — including the comparison table and the issue list.
-3. **Response** — status 200, body `@body('Select')`, and add the header
+4. **Response** — status 200, body `@body('Select_payloads')`, and add the header
    `Access-Control-Allow-Origin: *`. Without that header the browser will not
    let the page read the reply.
 
@@ -240,6 +249,30 @@ From there, Power BI over `SiteSurveys` gives you site readiness by branch, zone
 or state, and the issue counts tell the office which centres need the electrical
 contractor before delivery.
 
+
+---
+
+## 6b. Roles
+
+The role comes from the `Role` column of the user master, never from the page.
+The sign-in card asks which role you are only so a wrong choice can be caught
+and named; the answer is checked against the master before anyone gets in.
+
+| Sign-in | Role in user master | Sees |
+|---|---|---|
+| HO Admin | `admin` | Every survey, every zone |
+| Regional Manager | `regional` | Surveys from engineers in their zone |
+| Branch Official | `branch` | Surveys from engineers in their branch |
+| Field Engineer | `engineer` | Only the surveys they submitted |
+
+The scope is applied in two places on purpose: flow 2 filters in SharePoint so
+no one downloads what they should not see, and the app applies the same rule
+again to whatever comes back. Change a person's reach by editing their `Role`,
+`Branch` or `Zone` in `data/user-master.js` — nothing else needs touching.
+
+Zone and branch are matched on the **engineer who submitted the survey**, not on
+the site's own branch. A Bangalore engineer surveying a Hyderabad site appears
+under Bangalore, which is how the reporting line works.
 
 ---
 
