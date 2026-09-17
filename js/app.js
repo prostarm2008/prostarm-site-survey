@@ -3,7 +3,7 @@
    Single-file field application. No network dependency.
    ============================================================ */
 
-const APP_VERSION = 'v15';
+const APP_VERSION = 'v16';
 
 const CONFIG = {
   brand: 'ProstarM',
@@ -1017,6 +1017,10 @@ function applyDraft(d) {
     });
   });
   if (state.site) { $('#siteSearch').value = state.site.siteCode + ' · ' + state.site.siteName; paintSite(); }
+  // A resumed draft carries its own copy of the fields. Re-stamp so the survey
+  // belongs to whoever is signed in now — unless this is an edit, where the
+  // original engineer stays on the record.
+  if (!state.editingId) stampUser();
   paintGps();
   applyLoadNA();
   applyConditionals();
@@ -1110,8 +1114,9 @@ function surveyJSON() {
     startedAt: state.startedAt,
     submittedAt: state.submittedAt,
     lastEditedAt: (state.revision || 1) > 1 ? new Date().toISOString() : null,
-    engineerName: f.engineerName || '',
-    engineerId: f.engineerId || '',
+    // The signed-in user is the fallback, so a survey can never be filed nameless.
+    engineerName: f.engineerName || (u ? u.name : ''),
+    engineerId: f.engineerId || (u ? u.userId : ''),
     submittedBy: u ? { userId:u.userId, name:u.name, role:u.role, designation:u.designation,
                        branch:u.branch, zone:u.zone, managerCode:u.managerCode, managerName:u.managerName } : null,
     gps: state.gps,
@@ -1189,6 +1194,7 @@ const stripPhotos = rec => Object.assign({}, rec, {
 });
 
 let lastStoreError = '';
+let lastBootError = '';
 function tryStore(all) {
   try { localStorage.setItem(CONFIG.storeKey, JSON.stringify(all)); lastStoreError = ''; return true; }
   catch (e) { lastStoreError = e.name + ': ' + e.message; return false; }
@@ -1573,7 +1579,9 @@ function buildReport(payload) {
     photoHtml +
 
     '<div class="sign">' +
-      '<div>' + esc(v(d.engineerName)) + ' (' + esc(v(d.engineerId)) + ') — ' + esc(t('field engineer, signature and date')) + '</div>' +
+      '<div>' + esc(d.engineerName || (d.submittedBy || {}).name || '—') + ' (' +
+        esc(d.engineerId || (d.submittedBy || {}).userId || '—') + ') — ' +
+        esc(t('field engineer, signature and date')) + '</div>' +
       '<div>' + esc(t('Site representative — name, signature and date')) + '</div>' +
     '</div>' + reportFoot(d);
 
@@ -1861,6 +1869,9 @@ function cancelEdit() {
 let appView = 'survey';
 
 let remoteSurveys = [];          // pulled from SharePoint, read-only
+let remoteLoadedAt = null;       // when that last succeeded
+let remoteLoading = false;
+let lastRemoteError = '';
 const isEngineer = () => !state.user || state.user.role === 'engineer';
 
 /* HO Admin sees every zone, a Regional Manager their own zone, a Branch Official
@@ -1892,8 +1903,13 @@ const fetchLabel = () => t(isEngineer() ? 'Load my surveys from SharePoint'
 /* Reads surveys back from SharePoint through the list flow. The flow filters by
    role, and inScope() applies the same rule again to whatever comes back — so a
    field engineer gets their own work and nobody else's. */
-async function fetchAllSurveys() {
-  if (!CONFIG.listUrl) { toast(t('No SharePoint list flow is configured on this build.')); return; }
+async function fetchAllSurveys(quiet) {
+  if (!CONFIG.listUrl) {
+    if (!quiet) toast(t('No SharePoint list flow is configured on this build.'));
+    return;
+  }
+  if (remoteLoading) return;
+  remoteLoading = true;
   const btn = $('#btnFetchAll');
   if (btn) { btn.disabled = true; btn.textContent = t('Loading from SharePoint…'); }
   try {
@@ -1912,15 +1928,28 @@ async function fetchAllSurveys() {
                     : (r.RawPayload ? JSON.parse(r.RawPayload) : r);
       return Object.assign({}, payload, { syncStatus:'synced', fromSharePoint:true });
     }).filter(r => r && r.surveyId && inScope(r));
+    remoteLoadedAt = new Date();
+    lastRemoteError = '';
     renderMine();
     if (appView === 'dash') renderDashboard();
-    toast(remoteSurveys.length + ' ' + t('surveys loaded from SharePoint.'));
     renderDiagnostics();
+    if (!quiet) toast(remoteSurveys.length + ' ' + t('surveys loaded from SharePoint.'));
   } catch (e) {
-    toast(t('Could not reach SharePoint.') + ' ' + e.message);
+    lastRemoteError = e.message;
+    renderMine();
+    if (!quiet) toast(t('Could not reach SharePoint.') + ' ' + e.message);
   } finally {
+    remoteLoading = false;
     if (btn) { btn.disabled = false; btn.textContent = fetchLabel(); }
   }
+}
+
+/* Pull the person's surveys as soon as they sign in, so nobody has to know to
+   press a button to see their own work. Quiet: no toast, and a failure simply
+   leaves the manual button in place. */
+function autoLoadSurveys() {
+  if (!CONFIG.listUrl || !state.user || !navigator.onLine) return;
+  setTimeout(() => fetchAllSurveys(true), 400);
 }
 
 function showView(v) {
@@ -1934,6 +1963,7 @@ function showView(v) {
   $('.bottomnav').style.display   = v === 'survey' ? '' : 'none';
   if (v === 'dash') { buildDashFilters(); renderDashboard(); }
   if (v === 'mine') { renderMine(); renderDiagnostics(); }
+  if ((v === 'mine' || v === 'dash') && !remoteLoadedAt && !lastRemoteError) autoLoadSurveys();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -1964,6 +1994,9 @@ function renderDiagnostics() {
     [t('Submit flow'), CONFIG.flowUrl ? t('configured') : t('not configured — device only')],
     [t('List flow'), CONFIG.listUrl ? t('configured') : t('not configured — device only')],
     [t('Sign-in directory'), CONFIG.authUrl ? t('SharePoint') : t('bundled user list')],
+    [t('Loaded from SharePoint'), remoteLoadedAt ? remoteSurveys.length + ' · ' + remoteLoadedAt.toLocaleTimeString()
+       : (lastRemoteError || '—')],
+    [t('Last start-up error'), lastBootError || '—'],
     [t('Last storage error'), lastStoreError || '—'],
     [t('Last send error'), (all.filter(r => r.syncError).slice(-1)[0] || {}).syncError || '—']
   ];
@@ -1992,7 +2025,15 @@ function renderMine() {
   const fetchBtn = $('#btnFetchAll');
   if (fetchBtn) {
     fetchBtn.style.display = CONFIG.listUrl ? '' : 'none';
-    if (!syncing) fetchBtn.textContent = fetchLabel();
+    if (!remoteLoading) fetchBtn.textContent = remoteLoadedAt ? t('Refresh from SharePoint') : fetchLabel();
+  }
+  const rl = $('#remoteLine');
+  if (rl) {
+    rl.style.display = CONFIG.listUrl ? '' : 'none';
+    rl.textContent = remoteLoading ? t('Loading from SharePoint…')
+      : remoteLoadedAt ? t('Loaded from SharePoint at') + ' ' + remoteLoadedAt.toLocaleTimeString()
+      : lastRemoteError ? t('Could not reach SharePoint.') + ' ' + lastRemoteError
+      : '';
   }
   $('#btnMineExportAll').style.display = list.length ? '' : 'none';
 
@@ -2037,7 +2078,7 @@ function renderMineRows(list) {
       '<div class="facts">' +
         (isEngineer() ? '' :
           '<div><span>' + esc(t('Field engineer')) + '</span><b>' +
-          esc((r.submittedBy || {}).name || r.engineerName || '—') + '</b></div>') +
+          esc((r.submittedBy || {}).name || r.engineerName || r.engineerId || '—') + '</b></div>') +
         '<div><span>' + esc(t('UPS capacity')) + '</span><b>' + esc(s.upsCapacity || '—') + '</b></div>' +
         '<div><span>' + esc(t('Total load on UPS')) + '</span><b>' + esc(load) + '</b></div>' +
         '<div><span>' + esc(t('Issues')) + '</span><b>' + issues + '</b></div>' +
@@ -2380,6 +2421,7 @@ function enterApp(user) {
   showView('survey');
   measureBar();
   refresh();
+  autoLoadSurveys();
 }
 
 let selectedRole = '';
@@ -2620,6 +2662,7 @@ function measureBar() {
 
 /* ---- Boot ---- */
 document.addEventListener('DOMContentLoaded', () => {
+ try {
   registerServiceWorker();
   applyBranding();
   let saved = 'en';
@@ -2661,4 +2704,23 @@ document.addEventListener('DOMContentLoaded', () => {
     clearSession();
     showLogin('');
   }
+
+ } catch (e) {
+  // Something in start-up failed — a half-updated cache is the usual reason.
+  // Never leave the survey on screen with nobody signed in: fall back to the
+  // sign-in card and say what happened.
+  lastBootError = (e && e.message) ? e.message : String(e);
+  try { $('#app').style.display = 'none'; } catch (e2) {}
+  try {
+    $('#loginView').classList.add('show');
+    showLoginMsg(t('The app did not start cleanly. Sign in again, and if this repeats use Diagnostics to clear the cached app.') +
+                 ' (' + lastBootError + ')');
+  } catch (e2) {}
+ }
+
+ // Whatever happened above, an unsigned page shows the sign-in card.
+ if (!state.user) {
+   $('#app').style.display = 'none';
+   $('#loginView').classList.add('show');
+ }
 });

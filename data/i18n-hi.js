@@ -486,5 +486,10 @@ const I18N = { hi: {
 "Cannot reach the user directory, and this phone has no signed-in record yet. Connect once and try again.": "यूज़र डायरेक्टरी तक नहीं पहुँच सके, और इस फ़ोन पर पहले कभी साइन-इन नहीं हुआ। एक बार कनेक्ट होकर पुनः प्रयास करें।",
 "Signed in from this phone's saved record — the directory was unreachable.": "इस फ़ोन के सहेजे रिकॉर्ड से साइन इन — डायरेक्टरी तक नहीं पहुँच सके।",
 "The directory returned a record with no employee code.": "डायरेक्टरी ने बिना एम्प्लॉई कोड वाला रिकॉर्ड लौटाया।",
-"Could not read the user directory.": "यूज़र डायरेक्टरी पढ़ी नहीं जा सकी।"
+"Could not read the user directory.": "यूज़र डायरेक्टरी पढ़ी नहीं जा सकी।",
+"Refresh from SharePoint": "SharePoint से रीफ़्रेश करें",
+"Loaded from SharePoint at": "SharePoint से लोड हुआ",
+"Loaded from SharePoint": "SharePoint से लोड",
+"Last start-up error": "अंतिम स्टार्ट-अप त्रुटि",
+"The app did not start cleanly. Sign in again, and if this repeats use Diagnostics to clear the cached app.": "ऐप ठीक से शुरू नहीं हुआ। दोबारा साइन इन करें, और यदि यह फिर हो तो डायग्नोस्टिक्स से कैश्ड ऐप हटाएँ।"
 } };
