@@ -3,7 +3,7 @@
    Single-file field application. No network dependency.
    ============================================================ */
 
-const APP_VERSION = 'v16';
+const APP_VERSION = 'v17';
 
 const CONFIG = {
   brand: 'ProstarM',
@@ -35,6 +35,135 @@ const CONFIG = {
   // Power input is recorded only for this site condition.
   powerCondition: 'Interior Ready with Electrical Work'
 };
+
+/* ============================================================
+   0b. IndexedDB-backed storage (drop-in replacement for localStorage)
+   ------------------------------------------------------------
+   Everything below used to read/write the browser's localStorage
+   directly. Photo-heavy drafts and submitted surveys can be large
+   (base64 images), and localStorage's ~5-10MB per-origin quota was
+   a real ceiling in the field. IndexedDB has a much larger quota
+   and does not block the main thread.
+
+   To avoid rewriting every call site into async/await (this file
+   reads storage synchronously in dozens of places — during render,
+   inside try/catch fallbacks, etc.), LS mirrors the exact
+   localStorage API (getItem/setItem/removeItem/key/length) but is
+   backed by a real IndexedDB object store:
+     - On boot, every record is loaded once into an in-memory
+       mirror (LS.ready resolves when that's done).
+     - getItem/key/length read the in-memory mirror synchronously,
+       so every existing call site keeps working unchanged.
+     - setItem/removeItem update the mirror immediately (so a
+       synchronous read-after-write in the same call stack still
+       sees the new value) and write through to IndexedDB in the
+       background, matching the original code's "best effort,
+       swallow the error" behaviour around localStorage.
+   ============================================================ */
+const LS = (function () {
+  const DB_NAME = 'prostarm_idb_v1';
+  const STORE = 'kv';
+  const mirror = new Map();
+  let db = null;
+
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      if (!window.indexedDB) { reject(new Error('IndexedDB unavailable')); return; }
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = () => { req.result.createObjectStore(STORE); };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error || new Error('IndexedDB open failed'));
+    });
+  }
+
+  // Keys this app has ever written to localStorage. Used once, on the very
+  // first boot after this update, to move anyone's existing drafts/surveys/
+  // session out of localStorage and into IndexedDB, so upgrading the app
+  // does not lose data that was already saved on the device.
+  const KNOWN_KEYS = [
+    'prostarm_survey_draft_v1', 'prostarm_session_v1', 'prostarm_survey_seq_v1',
+    'prostarm_lang_v1', 'prostarm_surveys_v1', 'prostarm_auth_cache_v1'
+  ];
+  function migrateFromLocalStorage() {
+    try {
+      if (!window.localStorage) return;
+      KNOWN_KEYS.forEach(key => {
+        if (mirror.has(key)) return; // IndexedDB already has it — don't overwrite
+        const val = localStorage.getItem(key);
+        if (val === null) return;
+        mirror.set(key, val);
+        persist(key, val);
+        localStorage.removeItem(key);
+      });
+    } catch (e) { /* localStorage inaccessible — nothing to migrate */ }
+  }
+
+  function hydrate() {
+    return openDB().then(database => new Promise((resolve, reject) => {
+      db = database;
+      const tx = db.transaction(STORE, 'readonly');
+      const store = tx.objectStore(STORE);
+      const cursorReq = store.openCursor();
+      cursorReq.onsuccess = (e) => {
+        const cur = e.target.result;
+        if (cur) { mirror.set(cur.key, cur.value); cur.continue(); }
+        else { migrateFromLocalStorage(); resolve(); }
+      };
+      cursorReq.onerror = () => reject(cursorReq.error);
+    })).catch(err => {
+      // No IndexedDB (very old browser / private-mode restrictions) — the
+      // mirror simply stays empty and behaves like a fresh, empty store.
+      db = null;
+      lsUnavailable = err && err.message ? err.message : String(err);
+    });
+  }
+
+  function persist(key, value) {
+    if (!db) return;
+    try {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).put(value, key);
+      // put() itself is fire-and-forget (callers read/write the in-memory
+      // mirror synchronously), but a failure — e.g. the device is genuinely
+      // out of disk space — only surfaces asynchronously via the
+      // transaction. Report it through the same LS.onWriteError hook the
+      // rest of the app already listens on, rather than swallowing it.
+      tx.onerror = tx.onabort = () => {
+        if (typeof LS.onWriteError === 'function') {
+          LS.onWriteError(key, (tx.error && tx.error.message) || 'write failed');
+        }
+      };
+    } catch (e) {
+      if (typeof LS.onWriteError === 'function') LS.onWriteError(key, e.message || String(e));
+    }
+  }
+
+  function remove(key) {
+    if (!db) return;
+    try {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).delete(key);
+    } catch (e) {}
+  }
+
+  let lsUnavailable = '';
+  const ready = hydrate();
+
+  return {
+    ready,
+    onWriteError: null, // app.js sets this to surface async write failures in diagnostics
+    getItem(key) { return mirror.has(key) ? mirror.get(key) : null; },
+    setItem(key, value) {
+      value = String(value);
+      mirror.set(key, value);
+      persist(key, value);
+    },
+    removeItem(key) { mirror.delete(key); remove(key); },
+    key(i) { return Array.from(mirror.keys())[i] ?? null; },
+    get length() { return mirror.size; },
+    get unavailable() { return lsUnavailable; }
+  };
+})();
 
 const PHOTO_SECTIONS = [
   ['sitecondition','Site condition'],
@@ -121,7 +250,7 @@ function t(s) {
 
 function setLang(lang, quiet) {
   LANG = (lang === 'hi') ? 'hi' : 'en';
-  try { localStorage.setItem(CONFIG.langKey, LANG); } catch (e) {}
+  try { LS.setItem(CONFIG.langKey, LANG); } catch (e) {}
   document.documentElement.lang = LANG;
   applyLang();
   if (!quiet) refresh();
@@ -928,7 +1057,7 @@ function paintStepper() {
 /* ============================================================
    10. Survey ID and drafts
    ============================================================ */
-function seqMap() { try { return JSON.parse(localStorage.getItem(CONFIG.seqKey) || '{}'); } catch (e) { return {}; } }
+function seqMap() { try { return JSON.parse(LS.getItem(CONFIG.seqKey) || '{}'); } catch (e) { return {}; } }
 
 function buildSurveyId(commit) {
   if (!state.site) return '';
@@ -936,7 +1065,7 @@ function buildSurveyId(commit) {
   const base = d + '-' + state.site.siteCode;
   const map = seqMap();
   const next = (map[base] || 0) + 1;
-  if (commit) { map[base] = next; try { localStorage.setItem(CONFIG.seqKey, JSON.stringify(map)); } catch (e) {} }
+  if (commit) { map[base] = next; try { LS.setItem(CONFIG.seqKey, JSON.stringify(map)); } catch (e) {} }
   return 'SS-' + d + '-' + state.site.siteCode + '-' + pad(next, 3);
 }
 
@@ -968,7 +1097,7 @@ function saveDraft(quiet) {
   saveEnabled = true;
   if (!state.draftId) state.draftId = 'DR-' + Date.now().toString(36).toUpperCase();
   try {
-    localStorage.setItem(CONFIG.draftKey, JSON.stringify(snapshot()));
+    LS.setItem(CONFIG.draftKey, JSON.stringify(snapshot()));
     if (!quiet) toast(t('Draft saved on this device.'));
     return true;
   } catch (e) {
@@ -976,7 +1105,7 @@ function saveDraft(quiet) {
       const lean = snapshot();
       lean.photos = { sitecondition:[], safety:[], wire:[] };
       lean.photosDropped = true;
-      localStorage.setItem(CONFIG.draftKey, JSON.stringify(lean));
+      LS.setItem(CONFIG.draftKey, JSON.stringify(lean));
       toast(t('Draft saved without photographs — device storage is full.'));
     } catch (e2) { toast(t('Draft could not be saved. Device storage is full.')); }
     return false;
@@ -984,7 +1113,7 @@ function saveDraft(quiet) {
 }
 
 function loadDraftObject() {
-  try { return JSON.parse(localStorage.getItem(CONFIG.draftKey) || 'null'); } catch (e) { return null; }
+  try { return JSON.parse(LS.getItem(CONFIG.draftKey) || 'null'); } catch (e) { return null; }
 }
 
 function applyDraft(d) {
@@ -1195,8 +1324,16 @@ const stripPhotos = rec => Object.assign({}, rec, {
 
 let lastStoreError = '';
 let lastBootError = '';
+// IndexedDB writes fail asynchronously (unlike localStorage.setItem, which
+// threw immediately), so surface a failed background write here for
+// Diagnostics and let the person know their most recent change on this
+// device may not have persisted past a reload.
+LS.onWriteError = function (key, msg) {
+  lastStoreError = 'device storage write failed (' + key + '): ' + msg;
+  try { toast(t('Could not save to device storage. Free up space and try again.')); } catch (e) {}
+};
 function tryStore(all) {
-  try { localStorage.setItem(CONFIG.storeKey, JSON.stringify(all)); lastStoreError = ''; return true; }
+  try { LS.setItem(CONFIG.storeKey, JSON.stringify(all)); lastStoreError = ''; return true; }
   catch (e) { lastStoreError = e.name + ': ' + e.message; return false; }
 }
 
@@ -1231,7 +1368,7 @@ async function submitSurveyToServer(payload) {
 
   // Free the draft copy of the same photographs before writing the submission,
   // or a device near its storage limit has to hold both at once.
-  try { localStorage.removeItem(CONFIG.draftKey); } catch (e) {}
+  try { LS.removeItem(CONFIG.draftKey); } catch (e) {}
 
   const all = storedSurveys();
   const existing = all.findIndex(r => r.surveyId === payload.surveyId);
@@ -1245,7 +1382,7 @@ async function submitSurveyToServer(payload) {
   }
   if (!stored) {
     // Nothing was written. Say so rather than reporting a submission that vanished.
-    lastStoreError = 'localStorage full — survey not saved on this device';
+    lastStoreError = 'device storage full — survey not saved on this device';
     toast(t('This device is out of storage. The survey could not be saved.'));
   }
 
@@ -1761,7 +1898,7 @@ function exportCurrent(kind) {
 }
 
 function storedSurveys() {
-  try { return JSON.parse(localStorage.getItem(CONFIG.storeKey) || '[]'); } catch (e) { return []; }
+  try { return JSON.parse(LS.getItem(CONFIG.storeKey) || '[]'); } catch (e) { return []; }
 }
 
 function exportAll() {
@@ -1970,9 +2107,9 @@ function showView(v) {
 function storageUsedKB() {
   try {
     let n = 0;
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      n += (k.length + (localStorage.getItem(k) || '').length);
+    for (let i = 0; i < LS.length; i++) {
+      const k = LS.key(i);
+      n += (k.length + (LS.getItem(k) || '').length);
     }
     return Math.round(n / 512);   // UTF-16, two bytes a character
   } catch (e) { return -1; }
@@ -2298,7 +2435,7 @@ async function hashPassword(userId, pwd, salt) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-function authCache() { try { return JSON.parse(localStorage.getItem(CONFIG.authCacheKey) || '{}'); } catch (e) { return {}; } }
+function authCache() { try { return JSON.parse(LS.getItem(CONFIG.authCacheKey) || '{}'); } catch (e) { return {}; } }
 
 async function rememberCredentials(user, pwd) {
   try {
@@ -2308,7 +2445,7 @@ async function rememberCredentials(user, pwd) {
     if (!hash) return;
     cache.users = cache.users || {};
     cache.users[String(user.userId).toLowerCase()] = { hash:hash, user:user, at:new Date().toISOString() };
-    localStorage.setItem(CONFIG.authCacheKey, JSON.stringify(cache));
+    LS.setItem(CONFIG.authCacheKey, JSON.stringify(cache));
   } catch (e) {}
 }
 
@@ -2379,10 +2516,10 @@ async function authenticate(id, pwd, role) {
 }
 
 function saveSession(user, remember) {
-  try { localStorage.setItem(CONFIG.sessionKey, JSON.stringify({ user, at:new Date().toISOString(), remember:!!remember })); } catch (e) {}
+  try { LS.setItem(CONFIG.sessionKey, JSON.stringify({ user, at:new Date().toISOString(), remember:!!remember })); } catch (e) {}
 }
-function readSession() { try { return JSON.parse(localStorage.getItem(CONFIG.sessionKey) || 'null'); } catch (e) { return null; } }
-function clearSession() { try { localStorage.removeItem(CONFIG.sessionKey); } catch (e) {} }
+function readSession() { try { return JSON.parse(LS.getItem(CONFIG.sessionKey) || 'null'); } catch (e) { return null; } }
+function clearSession() { try { LS.removeItem(CONFIG.sessionKey); } catch (e) {} }
 
 function showLogin(msg) {
   $('#loginView').classList.add('show');
@@ -2464,7 +2601,7 @@ async function doLogin() {
 
   const d = loadDraftObject();
   if (d && d.userId && d.userId !== r.user.userId) {
-    try { localStorage.removeItem(CONFIG.draftKey); } catch (e) {}
+    try { LS.removeItem(CONFIG.draftKey); } catch (e) {}
     saveEnabled = true;
     toast(t('Welcome') + ', ' + r.user.name.split(' ')[0] + '.');
   } else if (!offerDraft()) {
@@ -2651,8 +2788,8 @@ function offerDraft() {
     (d.photosDropped ? ' · photographs were not saved (device storage was full)' : '');
   $('#draftModal').classList.add('show');
   $('#btnResume').onclick = () => { $('#draftModal').classList.remove('show'); saveEnabled = true; applyDraft(d); refresh(); toast(t('Draft resumed.')); };
-  $('#btnStartNew').onclick = () => { $('#draftModal').classList.remove('show'); saveEnabled = true; try { localStorage.removeItem(CONFIG.draftKey); } catch (e) {} resetAll(); refresh(); };
-  $('#btnDeleteDraft').onclick = () => { $('#draftModal').classList.remove('show'); saveEnabled = true; try { localStorage.removeItem(CONFIG.draftKey); } catch (e) {} resetAll(); refresh(); toast(t('Draft deleted.')); };
+  $('#btnStartNew').onclick = () => { $('#draftModal').classList.remove('show'); saveEnabled = true; try { LS.removeItem(CONFIG.draftKey); } catch (e) {} resetAll(); refresh(); };
+  $('#btnDeleteDraft').onclick = () => { $('#draftModal').classList.remove('show'); saveEnabled = true; try { LS.removeItem(CONFIG.draftKey); } catch (e) {} resetAll(); refresh(); toast(t('Draft deleted.')); };
   return true;
 }
 
@@ -2661,12 +2798,16 @@ function measureBar() {
 }
 
 /* ---- Boot ---- */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
  try {
+  // Wait for the IndexedDB-backed store to finish loading its in-memory
+  // mirror. Every LS.getItem() call below (session, drafts, language,
+  // etc.) depends on this having completed first.
+  await LS.ready;
   registerServiceWorker();
   applyBranding();
   let saved = 'en';
-  try { saved = localStorage.getItem(CONFIG.langKey) || 'en'; } catch (e) {}
+  try { saved = LS.getItem(CONFIG.langKey) || 'en'; } catch (e) {}
   LANG = (saved === 'hi') ? 'hi' : 'en';
   document.documentElement.lang = LANG;
   $('#surveyDate').value = todayISO();
